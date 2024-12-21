@@ -1,0 +1,55 @@
+title: osrs_gph.rs back-end settings file.
+
+api:
+  url: https://prices.runescape.wiki/api/v1/osrs
+  timespan: latest
+  auth_headers:
+    User-Agent: profit_margins - @blamblamdan
+
+filepaths:
+  price_data: api_data/price_data.json
+
+  lookup_data:
+    id_to_name: lookup_data/id_to_name.json
+    name_to_id: lookup_data/name_to_id.json
+    api_mapping: lookup_data/mapping.json
+
+    recipes: lookup_data/recipes.json
+
+  results:
+    optimal: results/optimal_overview.md
+    lookup: results/recipe_lookup.md
+
+  log_file: runtime.log
+
+profit:
+  # Underscores are removed from strings
+  coins: 2_852_000
+  percent_margin: 2.5
+  weights:
+    margin_to_time: 1.e-2
+    time: -2.0
+    gph: 1.e-5
+
+  # Recipes will be ignored if any required items are listed here
+  # (Items that have hit the buy limit or are just unwanted)
+  ignore_items:
+    -
+
+display:
+  # File output (Frontend)
+  # Number of entries to display in optimal_overview (0 == all)
+  number: 0
+
+  lookup:
+    # Number of entries from optimal_overview to lookup in recipe_lookup
+    top: 3
+    # Specific entries which might not be in the top bracket
+    specific:
+      -
+
+  # Filtering results (Backend)
+  must_profit: true
+  show_hidden: false
+  reverse: true
+

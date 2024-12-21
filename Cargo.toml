@@ -1,0 +1,25 @@
+[package]
+name = "osrs_gph"
+version = "0.1.0"
+edition = "2021"
+default-run = "osrs_gph"
+
+[dependencies]
+serde = { version = "1.0.203", features = ["derive"] }
+serde_json = "1.0.117"
+serde_yml = "0.0.10"
+tabled = "0.15.0"
+thousands = "0.2.0"
+
+
+# Keep debug information by default
+# Can disable this through CLI args
+[profile.release]
+debug = true
+
+
+# Clippy is smarter than me
+[lints.clippy]
+# pedantic = { level = "warn", priority = -1 }
+missing_errors_doc = "allow" # FUTURE: Change to "warn" when all errors are documented
+
