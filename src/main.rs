@@ -8,7 +8,8 @@ use itertools::Itertools;
 use osrs_gph::backend;
 use prettytable::Cell;
 fn main() {
-    println!("{:?}", RustUI::run(Settings::default()));
+    // println!("{:?}", RustUI::run(Settings::default()));
+    println!("{:?}", backend::main());
 }
 
 // Godsend https://github.com/tarkah/iced_table/blob/master/example/src/main.rs

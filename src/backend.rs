@@ -31,7 +31,7 @@ macro_rules! early_exit {
 }
 
 // #[allow(clippy::too_many_lines)]
-fn main() {
+pub fn main() {
     let (logger, results_fps, optimal_overview) = main_inner();
     write_results(&logger, &results_fps, &optimal_overview);
 }

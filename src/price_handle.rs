@@ -14,6 +14,7 @@ pub struct PriceHandle<'a, S: AsRef<Path>> {
 }
 
 impl<'a, S: AsRef<Path> + Display> PriceHandle<'a, S> {
+    #[must_use]
     pub fn new(all_items: LogItemSearch<'a, 'a, S>, recipe_list: LogRecipeBook<'a>, coins: i32, pmargin: f32) -> Self {
         Self {
             all_items,
@@ -115,6 +116,7 @@ impl<'a, S: AsRef<Path> + Display> PriceHandle<'a, S> {
             .collect()
     }
 
+    #[must_use]
     pub fn parse_item_list(&self, items: &HashMap<String, f32>) -> Option<Vec<(Item, f32)>> {
         let filtered_items: Vec<_> = items
             .iter()
