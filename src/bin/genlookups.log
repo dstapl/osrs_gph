@@ -1,0 +1,16 @@
+module: generate_lookups:36
+ Mar 14 02:03:24.808 DEBG Initialised logger.
+module: osrs_gph::logging:170
+ Mar 14 02:03:24.808 INFO Opened file lookup_data/mapping.json
+module: osrs_gph::logging:244
+ Mar 14 02:03:24.808 INFO Reading file lookup_data/mapping.json
+module: osrs_gph::logging:170
+ Mar 14 02:03:24.885 INFO Opened file lookup_data/id_to_name.json
+ Mar 14 02:03:24.887 INFO Opened file lookup_data/id_to_name.json
+module: osrs_gph::logging:235
+ Mar 14 02:03:24.887 INFO Overwriting file lookup_data/id_to_name.json
+module: osrs_gph::logging:170
+ Mar 14 02:03:24.889 INFO Opened file lookup_data/name_to_id.json
+ Mar 14 02:03:24.890 INFO Opened file lookup_data/name_to_id.json
+module: osrs_gph::logging:235
+ Mar 14 02:03:24.890 INFO Overwriting file lookup_data/name_to_id.json
