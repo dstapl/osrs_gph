@@ -6,15 +6,16 @@ use serde::Deserialize;
 #[derive(Deserialize, Debug, Default)]
 /// Define config type
 pub struct Config {
-    title: String,
-    api: Api,
-    filepaths: FilePaths,
-    profit: Profit,
-    display: Display,
+    pub title: String,
+    pub api: Api,
+    pub filepaths: FilePaths,
+    pub profit: Profit,
+    pub display: Display,
+    pub levels: Levels,
 }
 
 #[derive(Deserialize, Debug, Default)]
-enum TimeSpan {
+pub enum TimeSpan {
     #[default]
     #[serde(rename = "latest")]
     Latest,
@@ -26,62 +27,101 @@ enum TimeSpan {
 
 #[derive(Deserialize, Debug)]
 pub struct Api {
-    url: String,
-    timespan: TimeSpan,
-    auth_headers: HashMap<String, String>,
+    pub url: String,
+    pub timespan: TimeSpan,
+    pub auth_headers: HashMap<String, String>,
 }
 
 #[derive(Deserialize, Debug)]
-struct LookupDataPaths {
-    id_to_name: String,
-    name_to_id: String,
-    api_mapping: String,
-    recipes: String,
+pub struct LookupDataPaths {
+    pub id_to_name: String,
+    pub name_to_id: String,
+    pub api_mapping: String,
+    pub recipes: String,
 }
 
 #[derive(Deserialize, Debug)]
-struct ResultsPaths {
-    optimal: String,
-    lookup: String,
+pub struct ResultsPaths {
+    pub optimal: String,
+    pub lookup: String,
 }
 
 #[derive(Deserialize, Debug)]
-struct FilePaths {
-    price_data: String,
-    lookup_data: LookupDataPaths,
-    results: ResultsPaths,
-    log_file: String,
+pub struct FilePaths {
+    pub price_data: String,
+    pub lookup_data: LookupDataPaths,
+    pub results: ResultsPaths,
+    pub log_file: String,
 }
 
 #[derive(Deserialize, Debug)]
-struct Weights {
-    margin_to_time: f32,
-    time: f32,
-    gph: f32,
+pub struct Weights {
+    pub margin_to_time: f32,
+    pub time: f32,
+    pub gph: f32,
 }
 
 #[derive(Deserialize, Debug)]
-struct Profit {
+pub struct Profit {
     #[serde(deserialize_with = "deserialize_underscored_integer")]
-    coins: i32,
-    percent_margin: f32,
-    weights: Weights,
-    ignore_items: Vec<String>,
+    pub coins: i32,
+    pub percent_margin: f32,
+    pub weights: Weights,
+    pub ignore_items: Vec<String>,
 }
 
 #[derive(Deserialize, Debug)]
-struct LookupOptions {
-    top: u32,
-    specific: Vec<String>,
+pub struct LookupOptions {
+    pub top: u32,
+    pub specific: Vec<String>,
 }
 
 #[derive(Deserialize, Debug)]
-struct Display {
-    number: u32,
-    lookup: LookupOptions,
-    must_profit: bool,
-    show_hidden: bool,
-    reverse: bool,
+pub struct Display {
+    pub number: u32,
+    pub lookup: LookupOptions,
+    pub must_profit: bool,
+    pub show_hidden: bool,
+    pub reverse: bool,
+}
+
+#[derive(Debug)]
+pub struct Levels {
+    pub levels: HashMap<String, u32>,
+    pub total_level: u32,
+    // If a skill is marked as recommended
+    //      should this level limit be encforced?
+    pub strict_recommended: bool, 
+
+}
+
+impl Levels {
+    fn new(levels: HashMap<String, u32>, strict_recommended: bool) -> Self {
+        let mut levels = levels;
+        let total_level = Self::_init_calc_total_level(&levels);
+
+        levels.insert("total level".to_string(), total_level);
+        Levels { levels , total_level, strict_recommended }
+    }
+    fn calc_total_level(&self) -> u32 {
+        let level_sum = Self::_init_calc_total_level(&self.levels);
+        
+        let curr_total_level: u32 = self.levels.get("total level")
+            .unwrap_or_else(|| &0).to_owned();
+
+        let curr_quest_points: u32 = self.levels.get("quest points")
+            .unwrap_or_else(|| &0).to_owned();
+        level_sum  - curr_total_level - curr_quest_points
+
+    }
+    fn _init_calc_total_level(levels: &HashMap<String, u32>) -> u32 {
+        let level_sum: u32 = levels // Includes total_level
+            .values().map(|&x| 
+                u32::from(x)
+            ).sum::<u32>().into();
+
+        level_sum
+    }
 }
 
 impl Default for Api {
@@ -102,10 +142,11 @@ impl Default for Api {
 impl Default for LookupDataPaths {
     fn default() -> Self {
         Self {
-            id_to_name: "lookup_data/id_to_name.json".to_string(),
-            name_to_id: "lookup_data/name_to_id.json".to_string(),
+            id_to_name: "lookup_data/id_to_name.yaml".to_string(),
+            name_to_id: "lookup_data/name_to_id.yaml".to_string(),
+            recipes: "lookup_data/recipes.yaml".to_string(),
+            // External file
             api_mapping: "lookup_data/mapping.json".to_string(),
-            recipes: "lookup_data/recipes.json".to_string(),
         }
     }
 }
@@ -169,6 +210,39 @@ impl Default for Display {
     }
 }
 
+impl Default for Levels {
+    fn default() -> Self {
+        let mut levels = HashMap::with_capacity(23);
+        levels.insert("hitpoints".to_string(), 10);
+        levels.insert("attack".to_string(), 1);
+        levels.insert("defence".to_string(), 1);
+        levels.insert("strength".to_string(), 1);
+        levels.insert("ranged".to_string(), 1);
+        levels.insert("prayer".to_string(), 1);
+        levels.insert("magic".to_string(), 1);
+        levels.insert("cooking".to_string(), 1);
+        levels.insert("woodcutting".to_string(), 1);
+        levels.insert("fletching".to_string(), 1);
+        levels.insert("fishing".to_string(), 1);
+        levels.insert("firemaking".to_string(), 1);
+        levels.insert("crafting".to_string(), 1);
+        levels.insert("smithing".to_string(), 1);
+        levels.insert("mining".to_string(), 1);
+        levels.insert("herblore".to_string(), 1);
+        levels.insert("agility".to_string(), 1);
+        levels.insert("thieving".to_string(), 1);
+        levels.insert("slayer".to_string(), 1);
+        levels.insert("farming".to_string(), 1);
+        levels.insert("runecraft".to_string(), 1);
+        levels.insert("hunter".to_string(), 1);
+        levels.insert("construction".to_string(), 1);
+        levels.insert("quest points".to_string(), 0);
+        //let total_level: u32 = Self::_init_calc_total_level(&levels);
+        //levels.insert("total level".to_string(), total_level);
+        Levels::new(levels, false)
+    }
+}
+
 #[derive(Debug)]
 pub enum ConfigError {
     FileError(std::io::Error),
@@ -193,7 +267,6 @@ pub fn load_config<P: AsRef<std::path::Path>>(filepath: P) -> Config {
         .unwrap_or_else(|e| panic!("{e:?}"))
 }
 
-
 /// To parse underscored integer representaions
 fn deserialize_underscored_integer<'de, D, T>(deserializer: D) -> Result<T, D::Error>
 where
@@ -202,10 +275,56 @@ where
 {
     // First, deserialize the value as a string (which might fail...)
     let mut s: String = serde::de::Deserialize::deserialize(deserializer)?;
-    
+
     s.retain(char::is_numeric);
 
     s.parse().map_err(|_: <T as std::str::FromStr>::Err| {
         serde::de::Error::custom("string does not represent an integer")
     })
+}
+
+
+use serde::{de::Visitor, Deserializer};
+use std::fmt;
+impl<'de> Deserialize<'de> for Levels {
+    // #[inline]
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        struct LevelsVisitor;
+
+        impl<'de> Visitor<'de> for LevelsVisitor {
+            type Value = Levels;
+
+            fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+                // formatter.write_str("four fields containting values/nones: i32,u32,i32,u32.")
+                formatter.write_str("23 fields of u32 corresponding to the level in each OSRS skill.")
+            }
+
+            fn visit_map<A>(self, mut map: A) -> Result<Self::Value, A::Error>
+            where
+                A: serde::de::MapAccess<'de>,
+            {
+                // TODO: Is there a way to write this using different visitors?
+
+                // First value will be `option: strict_recommended: bool`
+                let (_, options_map) = map.next_entry::<String, HashMap<String,bool>>()?
+                    .expect("Failed to deserialize Levels.options");
+                let strict_recommended: bool = *options_map.get("strict_recommended")
+                    .expect("Failed to find strict_recommended in config file");
+
+
+                let (_, skill_map) = map.next_entry::<String, HashMap<String, u32>>()?
+                    .expect("Failed to deserialize levels in config file");
+
+                let levels = skill_map.into_iter()
+                    .map(|(key, value)| (key.to_lowercase(), value))
+                    .collect::<HashMap<String, u32>>();
+
+                Ok(Levels::new(levels, strict_recommended))
+            }
+        }
+        deserializer.deserialize_map(LevelsVisitor)
+    }
 }

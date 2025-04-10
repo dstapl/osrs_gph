@@ -10,11 +10,11 @@ filepaths:
   price_data: api_data/price_data.json
 
   lookup_data:
-    id_to_name: lookup_data/id_to_name.json
-    name_to_id: lookup_data/name_to_id.json
+    id_to_name: lookup_data/id_to_name.yaml
+    name_to_id: lookup_data/name_to_id.yaml
     api_mapping: lookup_data/mapping.json
 
-    recipes: lookup_data/recipes.json
+    recipes: lookup_data/recipes.yaml
 
   results:
     optimal: results/optimal_overview.md
@@ -53,3 +53,33 @@ display:
   show_hidden: false
   reverse: true
 
+levels:
+  # Put all player character levels here
+  options:
+    strict_recommended: true
+  levels:
+    combat level: 105
+    quest points: 273
+    attack: 87
+    defence: 85
+    strength: 80
+    hitpoints: 85
+    ranged: 74
+    prayer: 70
+    magic: 81
+    cooking: 70
+    woodcutting: 71
+    fletching: 60
+    fishing: 63
+    firemaking: 83
+    crafting: 82
+    smithing: 71
+    mining: 74
+    herblore: 65
+    agility: 71
+    thieving: 77
+    slayer: 75
+    farming: 55
+    runecraft: 59
+    hunter: 59
+    construction: 57
