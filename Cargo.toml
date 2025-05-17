@@ -12,6 +12,9 @@ serde_json = "1.0.117"
 serde_yml = "0.0.10"
 tabled = "0.15.0"
 thousands = "0.2.0"
+tracing = "0.1.41"
+# TODO: Add json support?
+tracing-subscriber = { version = "0.3.19", features = ["env-filter"] }
 
 
 # Keep debug information by default

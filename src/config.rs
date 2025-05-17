@@ -14,7 +14,7 @@ pub struct Config {
     pub levels: Levels,
 }
 
-#[derive(Deserialize, Debug, Default)]
+#[derive(Deserialize, Debug, Default, Clone)]
 pub enum TimeSpan {
     #[default]
     #[serde(rename = "latest")]
@@ -23,6 +23,7 @@ pub enum TimeSpan {
     FiveMinute,
     #[serde(rename = "1h")]
     OneHour,
+    // TODO: Extend to 6h(our), 24h(our)? This is only for specific item lookup
 }
 
 #[derive(Deserialize, Debug)]
