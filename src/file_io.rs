@@ -5,6 +5,7 @@ use std::time::Instant;
 use std::path::Path;
 
 
+#[derive(Debug)]
 pub enum SerChoice {
     JSON,
     YAML
@@ -12,20 +13,63 @@ pub enum SerChoice {
 
 
 #[derive(Debug)]
+pub struct FileOptions {
+    read: bool,
+    write: bool,
+    create: bool,
+}
+
+#[derive(Debug)]
 pub struct FileIO<S: AsRef<Path>> {
     pub filename: S,
-    pub options: [bool; 3],
+    pub options: FileOptions,
     buf_size: usize,
 }
 
+impl FileOptions {
+    pub fn new(read: bool, write: bool, create: bool) -> Self {
+        FileOptions { read, write, create }
+    }
+}
+
+impl<S: AsRef<Path>> std::io::Write for FileIO<S> {
+    fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
+        todo!()
+    }
+
+    fn flush(&mut self) -> io::Result<()> {
+        todo!()
+    }
+
+    fn by_ref(&mut self) -> &mut Self
+        where
+            Self: Sized, {
+        todo!()
+    }
+
+    fn write_all(&mut self, mut buf: &[u8]) -> io::Result<()> {
+        todo!()
+    }
+
+    fn write_fmt(&mut self, args: std::fmt::Arguments<'_>) -> io::Result<()> {
+        todo!()
+    }
+
+    fn write_vectored(&mut self, bufs: &[io::IoSlice<'_>]) -> io::Result<usize> {
+        todo!()
+    }
+}
+
 impl<S: AsRef<Path>> FileIO<S> {
-    pub fn new(filename: S, options: [bool; 3]) -> Self {
+    pub fn new(filename: S, options: FileOptions) -> Self {
         Self {
             filename,
             options,
             buf_size: 8192usize, // Default capacity for BufRead/Writer
         }
     }
+
+    // pub fn create_with_options(&mut self,
     pub fn with_buf_size<N: Into<usize>>(&mut self, buf_size: N) {
         self.buf_size = buf_size.into();
     }
@@ -52,12 +96,13 @@ impl<S: AsRef<Path>> FileIO<S> {
     }
     // Is this the best way?
     fn file(&self) -> File {
-        let [read, write, create] = self.options;
+        let options = &self.options;
         let filename = &self.filename;
+
         std::fs::OpenOptions::new()
-            .read(read)
-            .write(write)
-            .create(create)
+            .read(options.read)
+            .write(options.write)
+            .create(options.create)
             .open(filename)
             .expect("Failed to deserialize file contents")
     }

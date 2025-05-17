@@ -1,8 +1,12 @@
 use std::collections::HashMap;
 
+use reqwest::{blocking, header::HeaderMap};
 use serde::Deserialize;
 
-use crate::config::Config;
+use crate::{config::Config, log_match_err};
+
+use tracing::{debug, info, warn, error, trace, span};
+
 
 #[derive(Debug, Deserialize)]
 pub struct MappingItem {
@@ -18,15 +22,58 @@ pub struct MappingItem {
     pub lowalch: i32,
 }
 
+
+#[derive(Debug)]
+// [Latest](Timespan::Latest) will return the latest high and low prices
+// [Oldest](Timespan::Oldest) will provide an average of the prices for:
+//  `5` minutes
+//  `1` hour
+pub enum Timespan{
+    Latest,
+    Oldest(u16), // 5(minutes), 1(hour) 
+    // TODO: Implement *SPECIFIC ITEM* timeseries? Not really needed...
+    // Maybe only if the item can't be found in the current timespan?
+    // -> Increase the lookback time
+    //Series(u16), // 5(minutes), 1(hours), 6(hours), 24(hours)
+}
+
+#[derive(Debug)]
 pub struct Api {
-    pub config: &crate::config::Api
-    headers: ApiHeaders
+    url: String,
+    timespan: Timespan,
+    //pub config: &'static crate::config::Api,
+    headers: ApiHeaders,
 }
 
+#[derive(Debug)]
 pub struct ApiHeaders {
-    pub headers: HashMap<String, String>
+    pub headers: HashMap<String, String>,
 }
 
+
+impl From<crate::config::TimeSpan> for Timespan {
+    fn from(span: crate::config::TimeSpan) -> Self {
+        match span{
+            crate::config::TimeSpan::Latest => Self::Latest,
+            crate::config::TimeSpan::FiveMinute => Self::Oldest(5),
+            crate::config::TimeSpan::OneHour => Self::Oldest(1),
+        }
+    }
+}
+
+impl Timespan {
+    // TODO: Include `/` in endpoint String?
+    fn get_endpoint(&self) -> String {
+        match self {
+            Self::Latest => "/latest",
+            Self::Oldest(t) => { match t {
+                5 => "/5m",
+                1 => "/1h",
+                unknown => panic!("Unimplemented timespan {}", unknown)
+            }}
+        }.to_string()
+    }
+}
 
 impl<S: Into<String>> From<HashMap<S,S>> for ApiHeaders {
     fn from(value: HashMap<S,S>) -> Self {
@@ -37,24 +84,70 @@ impl<S: Into<String>> From<HashMap<S,S>> for ApiHeaders {
     }
 }
 
-impl Api {
-    fn new<H: Into<ApiHeaders>>(config: &crate::config::Api, headers: H) -> Self {
-        Api { config, headers: headers.into() }
+impl<K, V> Extend<(K, V)> for ApiHeaders where
+K: Into<String>,
+V: Into<String> {
+    #[inline]
+    fn extend<T: IntoIterator<Item = (K, V)>>(&mut self, iter: T) {
+        self.headers.extend(
+            iter.into_iter().map(|(k,v)| (k.into(), v.into()))
+        )
     }
-    
-    fn add_headers<S: Into<String>>(self, headers: HashMap<S,S>) -> Self {
-        
-    }
-
-    fn set_headers(self, headers: ApiHeaders) -> Result<(), Some(())> {
-        self.headers = (HashMap::new()).into();
-
-    }
-
-    fn request() { todo!() }
 }
 
+impl Api {
+    pub fn new(api_config: &crate::config::Api) -> Self {
+        //Api { config: config, headers: config.auth_headers.clone().into()}
+        Api {
+            url: api_config.url.clone(),
+            timespan: Timespan::from(api_config.timespan.clone()),
+            headers: ApiHeaders::from(api_config.auth_headers.clone()),
+        }
+    }
+
+    /// Updates existing API [headers](Api::headers) with provided `headers`
+    pub fn add_headers<S: Into<String>>(&mut self, headers: HashMap<S,S>) {
+        self.headers.extend(headers)
+    }
+
+    /// Replaces existing API [headers](Api::headers) with provided `headers`
+    pub fn set_headers(&mut self, headers: ApiHeaders) {
+        self.headers = headers
+    }
+
+    /// Make a request to the [config](Api::config::api::url)
+    /// At the current endpoint
+    #[tracing::instrument(name = "api::request")]
+    pub fn request(&self) -> blocking::Response {
+        // TODO: Optimise by storing headers as HeaderMap in API struct?
+        let header_map: HeaderMap = log_match_err(
+            HeaderMap::try_from(&self.headers.headers),
+            "Made HeaderMap", "HeaderMap conversion error");
+
+        let endpoint: String = self.timespan.get_endpoint();
+        let target: String = self.url.to_owned() + &endpoint;
+
+        let client = blocking::Client::new();
+        let res_build = client.get(target).headers(header_map);
+
+        let res = log_match_err(res_build.send(), "Recieved response",
+            "Request sent error");
+
+        res
+    }
+
+    pub fn request_timespan(&mut self, timespan: Timespan) -> blocking::Response {
+       self.timespan = timespan;
+       self.request()
+    }
+}
+
+
+// TODO: Move to price handling...
 fn request_item_prices(config: &Config) -> Result<(), std::io::Error> {
-    let api: Api = Api::new(config.api);
+    let api: Api = Api::new(&config.api);
+
+    let res = api.request();
     
+    Ok(())
 }
