@@ -52,7 +52,8 @@ pub struct FilePaths {
     pub price_data: String,
     pub lookup_data: LookupDataPaths,
     pub results: ResultsPaths,
-    pub log_file: String,
+    pub main_log_file: String,
+    pub bin_log_file: String,
 }
 
 #[derive(Deserialize, Debug)]
@@ -165,7 +166,8 @@ impl Default for FilePaths {
             price_data: "api_data/price_data.json".to_string(),
             lookup_data: LookupDataPaths::default(),
             results: ResultsPaths::default(),
-            log_file: "runtime.log".to_string(),
+            main_log_file: "runtime.log".to_string(),
+            bin_log_file: "generators.log".to_string(),
         }
     }
 }

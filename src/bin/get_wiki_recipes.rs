@@ -50,7 +50,10 @@ fn retrieve_webpage<'a, S: IntoUrl>(url: S, overwrite: bool) -> Result<String, E
     // Check if exists as a file already
     let path: &Path = Path::new("src\\bin\\wiki_info\\Money_making_guide.html");
     let read_from_file: bool = path.try_exists().is_ok_and(|x| x == true);
-    let body = if read_from_file {
+
+    // If file doesn't exist and not overwriting...
+    // then skip to requesting the webpage
+    let body = if (!overwrite) && read_from_file {
         // Read from existing file
         let mut file = match File::open(&path) {
             Err(why) => panic!("couldn't open {}: {}", path.display(), why),

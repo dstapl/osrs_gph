@@ -1,10 +1,23 @@
 use osrs_gph::api::MappingItem;
 use osrs_gph::config::{self, load_config};
-use osrs_gph::file_io::{self, SerChoice};
+use osrs_gph::file_io::{self, FileOptions, SerChoice};
+use osrs_gph::log_match_err;
 use std::collections::HashMap;
 
+
+use tracing::{debug, info, error, span, trace, warn, Level};
+
 fn main() {
-    let config: config::Config = load_config("config.yaml");
+    let config_file_name = "config.yaml";
+    let config: config::Config = load_config(config_file_name);
+
+    // const LOG_LEVEL: Level = Level::TRACE;
+    // let subscriber = osrs_gph::make_subscriber(config.filepaths.bin_log_file.clone(), LOG_LEVEL);
+    //
+    // let _crateguard = tracing::subscriber::set_default(subscriber);
+    // let span = span!(LOG_LEVEL, "main").entered();
+
+    trace!("Initialised logger: {config_file_name}");
 
     let id_to_name_str: &str = &config.filepaths.lookup_data.id_to_name;
     let name_to_id_str: &str = &config.filepaths.lookup_data.name_to_id;
@@ -15,10 +28,14 @@ fn main() {
 
     let mut mapping_fio = file_io::FileIO::new(
             mapping_path_str,
-            [true, true, true]
+            FileOptions::new(true, true, true)
         );
 
-    let mapping: Vec<MappingItem> = mapping_fio.read(SerChoice::JSON).expect("Failed to parse mapping file");
+
+    let mapping: Vec<MappingItem> = log_match_err(mapping_fio.read(SerChoice::JSON),
+        &format!("Reading mapping file {mapping_path_str}"),
+        &format!("Failed to parse mapping {mapping_path_str}")
+    );
 
     let mut id_to_name = HashMap::<String, String>::with_capacity(mapping.len());
     let mut name_to_id = HashMap::<String, String>::with_capacity(mapping.len());
