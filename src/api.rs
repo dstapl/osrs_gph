@@ -1,9 +1,12 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, io::{BufReader, Read}};
 
 use reqwest::{blocking, header::HeaderMap};
 use serde::Deserialize;
 
-use crate::{config::Config, log_match_err};
+use crate::{log_match_err,
+    config::Config,
+    item_search::data_types,
+};
 
 use tracing::{debug, info, warn, error, trace, span};
 
@@ -23,7 +26,7 @@ pub struct MappingItem {
 }
 
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 // [Latest](Timespan::Latest) will return the latest high and low prices
 // [Oldest](Timespan::Oldest) will provide an average of the prices for:
 //  `5` minutes
@@ -31,17 +34,16 @@ pub struct MappingItem {
 pub enum Timespan{
     Latest,
     Oldest(u16), // 5(minutes), 1(hour) 
-    // TODO: Implement *SPECIFIC ITEM* timeseries? Not really needed...
-    // Maybe only if the item can't be found in the current timespan?
-    // -> Increase the lookback time
-    //Series(u16), // 5(minutes), 1(hours), 6(hours), 24(hours)
+                 // TODO: Implement *SPECIFIC ITEM* timeseries? Not really needed...
+                 // Maybe only if the item can't be found in the current timespan?
+                 // -> Increase the lookback time
+                 //Series(u16), // 5(minutes), 1(hours), 6(hours), 24(hours)
 }
 
 #[derive(Debug)]
 pub struct Api {
     url: String,
     timespan: Timespan,
-    //pub config: &'static crate::config::Api,
     headers: ApiHeaders,
 }
 
@@ -105,6 +107,11 @@ impl Api {
         }
     }
 
+    /// TODO: Make argument a String instead?
+    pub fn set_timespan(&mut self, timespan: Timespan) {
+        self.timespan = timespan
+    }
+
     /// Updates existing API [headers](Api::headers) with provided `headers`
     pub fn add_headers<S: Into<String>>(&mut self, headers: HashMap<S,S>) {
         self.headers.extend(headers)
@@ -115,10 +122,10 @@ impl Api {
         self.headers = headers
     }
 
-    /// Make a request to the [config](Api::config::api::url)
+    /// Make a request to the [config url](Api::config::api::url)
     /// At the current endpoint
     #[tracing::instrument(name = "api::request")]
-    pub fn request(&self) -> blocking::Response {
+    pub fn request_item_prices(&self) -> data_types::latest::PriceDataType {
         // TODO: Optimise by storing headers as HeaderMap in API struct?
         let header_map: HeaderMap = log_match_err(
             HeaderMap::try_from(&self.headers.headers),
@@ -130,24 +137,30 @@ impl Api {
         let client = blocking::Client::new();
         let res_build = client.get(target).headers(header_map);
 
-        let res = log_match_err(res_build.send(), "Recieved response",
-            "Request sent error");
+        let mut res = log_match_err(res_build.send(), "Recieved response",
+        "Request sent error");
+
+        // Decode response
+        let buffer = BufReader::new(res.by_ref());
+        let item_prices = log_match_err(
+            serde_yml::de::from_reader(buffer),
+            "Deserializing API response",
+            "Failed to deserialize API response",
+        );
+        
+        item_prices
+    }
+
+    /// Wrapper around [`self.request_item_prices`]
+    pub fn request_timespan_prices(&mut self, timespan: Timespan) -> data_types::latest::PriceDataType {
+        let old_timespan = self.timespan;
+
+        self.timespan = timespan;
+        let res = self.request_item_prices();
+
+        // Restore actual timespan
+        self.timespan = old_timespan;
 
         res
     }
-
-    pub fn request_timespan(&mut self, timespan: Timespan) -> blocking::Response {
-       self.timespan = timespan;
-       self.request()
-    }
-}
-
-
-// TODO: Move to price handling...
-fn request_item_prices(config: &Config) -> Result<(), std::io::Error> {
-    let api: Api = Api::new(&config.api);
-
-    let res = api.request();
-    
-    Ok(())
 }

@@ -4,6 +4,7 @@ use std::io::{self, BufReader, BufWriter, Seek};
 use std::time::Instant;
 use std::path::Path;
 
+use tracing::{debug, trace};
 
 #[derive(Debug)]
 pub enum SerChoice {
@@ -20,8 +21,8 @@ pub struct FileOptions {
 }
 
 #[derive(Debug)]
-pub struct FileIO<S: AsRef<Path>> {
-    pub filename: S,
+pub struct FileIO {
+    pub filename: String,
     pub options: FileOptions,
     buf_size: usize,
 }
@@ -32,36 +33,36 @@ impl FileOptions {
     }
 }
 
-impl<S: AsRef<Path>> std::io::Write for FileIO<S> {
+impl std::io::Write for FileIO {
     fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
-        todo!()
+        self.get_writer()?.write(buf)
     }
 
     fn flush(&mut self) -> io::Result<()> {
-        todo!()
+        self.get_writer()?.flush()
     }
 
     fn by_ref(&mut self) -> &mut Self
         where
             Self: Sized, {
-        todo!()
+        self
     }
 
-    fn write_all(&mut self, mut buf: &[u8]) -> io::Result<()> {
-        todo!()
+    fn write_all(&mut self, buf: &[u8]) -> io::Result<()> {
+        self.get_writer()?.write_all(buf)
     }
 
     fn write_fmt(&mut self, args: std::fmt::Arguments<'_>) -> io::Result<()> {
-        todo!()
+        self.get_writer()?.write_fmt(args)
     }
 
     fn write_vectored(&mut self, bufs: &[io::IoSlice<'_>]) -> io::Result<usize> {
-        todo!()
+        self.get_writer()?.write_vectored(bufs)
     }
 }
 
-impl<S: AsRef<Path>> FileIO<S> {
-    pub fn new(filename: S, options: FileOptions) -> Self {
+impl FileIO {
+    pub fn new(filename: String, options: FileOptions) -> Self {
         Self {
             filename,
             options,
@@ -91,7 +92,7 @@ impl<S: AsRef<Path>> FileIO<S> {
         self.metadata(f).is_ok()
     }
 
-    pub fn set_file_path(&mut self, fp: S) {
+    pub fn set_file_path(&mut self, fp: String) {
         self.filename = fp;
     }
     // Is this the best way?
@@ -152,7 +153,7 @@ impl<S: AsRef<Path>> FileIO<S> {
 
     /// # Errors
     /// When file does not exist or serialization fails.
-    pub fn write<J: Serialize>(
+    pub fn write_serialized<J: Serialize>(
         &mut self,
         data: &J,
     ) -> Result<(), std::io::Error> {
@@ -169,7 +170,7 @@ impl<S: AsRef<Path>> FileIO<S> {
 
     /// # Errors
     /// Errors when the file does not exist or deserialization fails.
-    pub fn read<'de, T: Deserialize<'de>>(&self, ser: SerChoice) -> Result<T, std::io::Error> {
+    pub fn read_serialized<'de, T: Deserialize<'de>>(&self, ser: SerChoice) -> Result<T, std::io::Error> {
         let buffer = self.get_reader()?;
 
         let t = match ser {

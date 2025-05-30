@@ -20,7 +20,9 @@ filepaths:
     optimal: results/optimal_overview.md
     lookup: results/recipe_lookup.md
 
-  log_file: runtime.log
+  main_log_file: runtime.log
+  # TODO: Currently this is shared across all bin files
+  bin_log_file: bin/generators.log
 
 profit:
   # Underscores are removed from strings
