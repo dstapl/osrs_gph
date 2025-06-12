@@ -1,10 +1,14 @@
 use serde::{Deserialize, Serialize};
+use tracing_subscriber::fmt::MakeWriter;
 use std::fs::{File, Metadata};
 use std::io::{self, BufReader, BufWriter, Seek};
+// use std::sync::Arc;
 use std::time::Instant;
 use std::path::Path;
 
-use tracing::{debug, trace};
+use tracing::{debug, instrument, trace};
+
+use crate::log_match_err;
 
 #[derive(Debug)]
 pub enum SerChoice {
@@ -22,9 +26,10 @@ pub struct FileOptions {
 
 #[derive(Debug)]
 pub struct FileIO {
-    pub filename: String,
+    // pub filename: String,
     pub options: FileOptions,
     buf_size: usize,
+    file: File,
 }
 
 impl FileOptions {
@@ -33,9 +38,15 @@ impl FileOptions {
     }
 }
 
+
+// TODO: Should all be synced?
 impl std::io::Write for FileIO {
     fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
-        self.get_writer()?.write(buf)
+        let mut writer = self.get_writer()?;
+        let bytes = writer.write(buf);
+        writer.flush()?;
+
+        bytes
     }
 
     fn flush(&mut self) -> io::Result<()> {
@@ -49,26 +60,67 @@ impl std::io::Write for FileIO {
     }
 
     fn write_all(&mut self, buf: &[u8]) -> io::Result<()> {
-        self.get_writer()?.write_all(buf)
+        let mut writer = self.get_writer()?;
+        let bytes = writer.write_all(buf);
+        writer.flush()?;
+
+        bytes
     }
 
     fn write_fmt(&mut self, args: std::fmt::Arguments<'_>) -> io::Result<()> {
-        self.get_writer()?.write_fmt(args)
+        let mut writer = self.get_writer()?;
+        let bytes = writer.write_fmt(args);
+        writer.flush()?;
+        
+        bytes
     }
 
     fn write_vectored(&mut self, bufs: &[io::IoSlice<'_>]) -> io::Result<usize> {
-        self.get_writer()?.write_vectored(bufs)
+        let mut writer = self.get_writer()?;
+        let bytes = writer.write_vectored(bufs);
+        writer.flush()?;
+
+        bytes
+    }
+}
+
+impl MakeWriter<'_> for FileIO {
+    type Writer = File;
+    fn make_writer(&'_ self) -> Self::Writer {
+        self.file.try_clone().expect(
+            "Failed to access internal file from FileIO struct"
+        )
     }
 }
 
 impl FileIO {
     pub fn new(filename: String, options: FileOptions) -> Self {
+        // let file = std::fs::OpenOptions::new()
+        //     .read(options.read)
+        //     .write(options.write)
+        //     .create(options.create)
+        //     .open(filename)
+        //     .expect("Failed to deserialize file contents");
+        let file = Self::_file_with_options(filename, &options);
+
         Self {
-            filename,
+            // filename,
             options,
             buf_size: 8192usize, // Default capacity for BufRead/Writer
+            file  // Temporary file
         }
     }
+
+    // TODO(URGENT!): Rename function
+    pub fn _file_with_options(filename: String, options: &FileOptions) -> File {
+        std::fs::OpenOptions::new()
+            .read(options.read)
+            .write(options.write)
+            .create(options.create)
+            .open(filename)
+            .expect("Failed to deserialize file contents")
+    }
+
 
     // pub fn create_with_options(&mut self,
     pub fn with_buf_size<N: Into<usize>>(&mut self, buf_size: N) {
@@ -93,43 +145,38 @@ impl FileIO {
     }
 
     pub fn set_file_path(&mut self, fp: String) {
-        self.filename = fp;
-    }
-    // Is this the best way?
-    fn file(&self) -> File {
-        let options = &self.options;
-        let filename = &self.filename;
-
-        std::fs::OpenOptions::new()
-            .read(options.read)
-            .write(options.write)
-            .create(options.create)
-            .open(filename)
-            .expect("Failed to deserialize file contents")
+        // Initialise new file with same options
+        self.file = Self::_file_with_options(fp, &self.options);
     }
 
     /// # Errors
     /// Errors if `Self::rewind` fails.
-    pub fn open_file(&self) -> Result<File, std::io::Error> {
-        let mut file = self.file(); // Open once
+    pub fn open_file(&mut self) -> Result<File, std::io::Error> {
+        // let mut file = &mut self.file; // Open once
 
-        if !self.exists(&file) {
+        if !&self.exists(&self.file) {
             return Err(io::ErrorKind::NotFound.into());
         };
 
-        self.rewind(&mut file);
-        Ok(file)
+        self.rewind();
+
+        Ok(self.file.try_clone()?)
     }
 
-    fn rewind(&self, file: &mut File) {
+    #[instrument(level = "trace", skip(self))]
+    fn rewind(&mut self) { //, file: &mut File) {
         // Need to rewind cursor just in case this isn't first operation
-        let curr_pos = file.stream_position().expect("Error seeking file cursor");
+        let curr_pos = self.file.stream_position().expect("Error seeking file cursor");
 
         if curr_pos == 0 {
             return; // Early exit. Don't rewind if not needed.
         }
 
-        file.rewind().expect("Erorr rewinding cursor")
+        // TODO: Change to a *trace* log
+        log_match_err(self.file.rewind(), 
+            "Rewinding cursor...", 
+            "Failed to rewind cursor.")
+        // self.file.rewind().expect("Error rewinding cursor")
     }
 
     pub fn has_data(&self, f: &File) -> bool {
@@ -144,7 +191,7 @@ impl FileIO {
         Ok(BufWriter::with_capacity(self.get_buf_size(), file))
     }
 
-    pub fn get_reader(&self) -> Result<BufReader<File>, std::io::Error> {
+    pub fn get_reader(&mut self) -> Result<BufReader<File>, std::io::Error> {
         let file = self.open_file()?;
 
         // TODO: Is file.read_to_string(...); faster?
@@ -170,7 +217,7 @@ impl FileIO {
 
     /// # Errors
     /// Errors when the file does not exist or deserialization fails.
-    pub fn read_serialized<'de, T: Deserialize<'de>>(&self, ser: SerChoice) -> Result<T, std::io::Error> {
+    pub fn read_serialized<'de, T: Deserialize<'de>>(&mut self, ser: SerChoice) -> Result<T, std::io::Error> {
         let buffer = self.get_reader()?;
 
         let t = match ser {
@@ -193,6 +240,7 @@ impl FileIO {
 
         file.set_len(0)?;
         file.sync_all()?;
+
         Ok(())
     }
 }

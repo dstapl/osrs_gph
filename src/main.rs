@@ -1,4 +1,4 @@
-use osrs_gph::{config, api};
+use osrs_gph::{api, config, helpers::Input};
 use tracing::{debug, info, error, span, trace, warn, Level};
 
 
@@ -22,19 +22,27 @@ fn main() {
     // Span levels are akin to the event levels: 
     //     too high and will revert to default guard instead of the span
     const LOG_LEVEL: Level = Level::TRACE;
-
     let subscriber = osrs_gph::make_subscriber(conf.filepaths.main_log_file, LOG_LEVEL);
-   
+
     let _crateguard = tracing::subscriber::set_default(subscriber);
-    let span = span!(LOG_LEVEL, "main").entered();
-    trace!("Loaded config and created subscriber to log file.");
+    let span = span!(LOG_LEVEL, "main");
+    let guard = span.enter();
+
+    trace!(desc = "Loaded config and created subscriber to log file.");
 
 
-    let api: api::Api = api::Api::new(&conf.api);
+    let inp = String::new().input("Enter a value");
+
+
+    println!("Printing input: {}", &inp);
+    // debug!("Recieved input: {}", inp);
+    debug!(input = ?inp);
+
+
+
     // api.set_timespan(Timespan::Latest)
-    let res = api.get_item_prices();
-
-    let span = span.exit();
+    // let api: api::Api = api::Api::new(&conf.api);
+    // let res = api.get_item_prices();
 
 }
 

@@ -112,7 +112,7 @@ impl RecipeBook {
 
     pub fn load_default_recipes(&mut self, recipe_path: String) {
         // let recipes_fio = Logging::<FileIO<S>>::new(, recipe_path);
-        let recipes_fio = FileIO::new(
+        let mut recipes_fio = FileIO::new(
             recipe_path,
             FileOptions::new(true, false, false)
         );

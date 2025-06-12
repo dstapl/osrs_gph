@@ -12,17 +12,20 @@ pub mod helpers;
 pub mod config;
 
 
-use tracing::{debug, error, Level};
-// Custom things
-// #[macro_export]
-// macro_rules! log_match_err {
-//     () => {
-//
-//     };
-// }
+use std::sync::{Arc, Mutex};
+
+use tracing::{debug, error, instrument::WithSubscriber, level_filters::LevelFilter, Level};
+use tracing_subscriber::{
+    fmt::format::FmtSpan, layer::SubscriberExt, Layer
+    // prelude::*,
+};
+
+
 pub fn log_match_err<R: std::any::Any + std::fmt::Debug, E: std::any::Any + std::fmt::Debug>(expr: Result<R, E>, desc: &str, err_msg: &str) -> R{
     let res: R = match expr {
-        Ok(res) => {debug!(desc = ?desc, result = ?res); res},
+        // TODO: Include result in log or not?
+        //  Becomes very large for matching on files...
+        Ok(res) => {debug!(desc = ?desc); res},
         Err(e) => {
             error!(desc = ?err_msg, reason = ?e);
             panic!("{}", err_msg);
@@ -33,13 +36,28 @@ pub fn log_match_err<R: std::any::Any + std::fmt::Debug, E: std::any::Any + std:
 }
 
 pub fn make_subscriber(filepath: String, log_level: Level) -> impl tracing::Subscriber {
-    let log_file_options = file_io::FileOptions::new(false, true, true);
-    // Cloning because "borrowed data leaves the function"
-    let log_file = file_io::FileIO::new(filepath, log_file_options);
+    let mut log_file = file_io::FileIO::new(
+        filepath, 
+        file_io::FileOptions::new(false, true, true)
+    );
 
-    let subscriber = tracing_subscriber::fmt()
-        .with_writer(std::sync::Mutex::new(log_file))
-        .finish();
 
+    let subscriber = tracing_subscriber::registry()
+        .with(
+            tracing_subscriber::fmt::layer()
+            .with_ansi(false) // Disable colour codes in text
+            .with_writer(
+                Mutex::new(
+                    // TODO(Bug): When using custom FileIO some logs
+                    //  are truncated. May be due to using BufWriter?
+                    // log_file
+                    log_file.open_file().expect("Failed to open logging file")
+                )
+            )
+            .with_filter(
+                LevelFilter::from_level(log_level)
+            )
+        )
+        ;
     subscriber
 }
