@@ -142,7 +142,7 @@ impl ItemSearch {
     fn find_prices_from_file(&mut self) -> Result<PriceDataType, std::io::Error>{
         // todo!()
         // Get correct file name and try to load contents
-        let price_io = crate::file_io::FileIO::new(
+        let mut price_io = crate::file_io::FileIO::new(
            self.filepaths.price_data.clone(),
            FileOptions::new(true, false, false),
         );

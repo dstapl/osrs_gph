@@ -22,7 +22,7 @@ filepaths:
 
   main_log_file: runtime.log
   # TODO: Currently this is shared across all bin files
-  bin_log_file: bin/generators.log
+  bin_log_file: src/bin/generators.log
 
 profit:
   # Underscores are removed from strings

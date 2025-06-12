@@ -8,6 +8,11 @@ use crate::{
 
 use std::{collections::HashMap, path::Path, fmt::Display};
 
+
+// TODO: CHANGE TO ACTUAL TYPE
+type Row = (i32, i32, i32, RecipeTime);
+
+
 pub struct PriceHandle {
     pub all_items: ItemSearch,
     pub recipe_list: RecipeBook,
@@ -24,8 +29,6 @@ impl PriceHandle {
             pmargin,
         }
     }
-
-
 
     pub fn recipe_price_overview_from_string(&self, recipe_name: &String) -> Option<Row> {
         let recipe = self.recipe_list.get_recipe(recipe_name)?;
@@ -53,15 +56,15 @@ impl PriceHandle {
             )
         );
         let profit = revenue-cost;
-        let time = &recipe.ticks;
+        let time = recipe.ticks.clone();
 
         Some(
-            row![
+            (
             cost,
             revenue,
             profit,
             time
-            ]
+            )
         )
     }
 
