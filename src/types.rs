@@ -3,7 +3,7 @@ use thousands::Separable;
 
 const SEC_IN_HOUR: u16 = 60 * 60;
 const NUM_HEADERS: usize = 5;
-const ROW_HEADERS: [&str; NUM_HEADERS] = [
+pub const ROW_HEADERS: [&str; NUM_HEADERS] = [
     "Method",
     "Loss/Gain",
     "(Total) Loss/Gain",

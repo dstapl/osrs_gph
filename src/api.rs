@@ -3,12 +3,10 @@ use std::{collections::HashMap, io::{BufReader, Read}};
 use reqwest::{blocking, header::HeaderMap};
 use serde::Deserialize;
 
-use crate::{log_match_err,
-    config::Config,
-    item_search::data_types,
+use crate::{config::Config, item_search::data_types, log_match_panic, log_panic
 };
 
-use tracing::{debug, info, warn, error, trace, span};
+use tracing::{debug, error, info, instrument, span, trace, warn};
 
 
 #[derive(Debug, Deserialize)]
@@ -71,7 +69,7 @@ impl Timespan {
             Self::Oldest(t) => { match t {
                 5 => "/5m",
                 1 => "/1h",
-                unknown => panic!("Unimplemented timespan {}", unknown)
+                unknown => log_panic("Unimplemented timespan", unknown),
             }}
         }.to_string()
     }
@@ -108,18 +106,34 @@ impl Api {
     }
 
     /// TODO: Make argument a String instead?
+    #[instrument(level = "trace", skip(self))]
     pub fn set_timespan(&mut self, timespan: Timespan) {
+        // TODO: Can you remove this trace! ?
+        // Is `instrument` logging as well?
+        trace!(desc = "Setting timespan", timespan = ?timespan);
         self.timespan = timespan
     }
 
     /// Updates existing API [headers](Api::headers) with provided `headers`
+    #[instrument(level = "trace", skip(self, headers))]
     pub fn add_headers<S: Into<String>>(&mut self, headers: HashMap<S,S>) {
-        self.headers.extend(headers)
+        trace!(desc = "Extending headers");
+        trace!(old = ?self.headers);
+
+        self.headers.extend(headers);
+
+        trace!(new = ?self.headers);
     }
 
     /// Replaces existing API [headers](Api::headers) with provided `headers`
+    #[instrument(level = "trace", skip(self, headers))]
     pub fn set_headers(&mut self, headers: ApiHeaders) {
-        self.headers = headers
+        trace!(desc = "Overwriting headers");
+        trace!(old = ?self.headers);
+
+        self.headers = headers;
+
+        trace!(new = ?self.headers);
     }
 
     /// Make a request to the [config url](Api::config::api::url)
@@ -127,7 +141,7 @@ impl Api {
     #[tracing::instrument(name = "api::request")]
     pub fn request_item_prices(&self) -> data_types::latest::PriceDataType {
         // TODO: Optimise by storing headers as HeaderMap in API struct?
-        let header_map: HeaderMap = log_match_err(
+        let header_map: HeaderMap = log_match_panic(
             HeaderMap::try_from(&self.headers.headers),
             "Made HeaderMap", "HeaderMap conversion error");
 
@@ -137,12 +151,12 @@ impl Api {
         let client = blocking::Client::new();
         let res_build = client.get(target).headers(header_map);
 
-        let mut res = log_match_err(res_build.send(), "Recieved response",
+        let mut res = log_match_panic(res_build.send(), "Recieved response",
         "Request sent error");
 
         // Decode response
         let buffer = BufReader::new(res.by_ref());
-        let item_prices = log_match_err(
+        let item_prices = log_match_panic(
             serde_yml::de::from_reader(buffer),
             "Deserializing API response",
             "Failed to deserialize API response",

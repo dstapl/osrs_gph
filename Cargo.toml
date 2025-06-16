@@ -5,6 +5,8 @@ edition = "2021"
 default-run = "osrs_gph"
 
 [dependencies]
+itertools = "0.14.0"
+num-format = "0.4.4"
 reqwest = { version = "0.12.15", features = ["blocking"] }
 scraper = "0.23.1"
 serde = { version = "1.0.203", features = ["derive"] }

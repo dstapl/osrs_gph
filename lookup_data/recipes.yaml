@@ -10,7 +10,7 @@ Ruby Rings:
     Ruby: 1
   outputs:
     Ruby ring: 1
-  time: 
+  time: 3
 Ruby Necklaces:
   name: "Ruby Necklaces"
   inputs:
@@ -18,7 +18,7 @@ Ruby Necklaces:
     Ruby: 1
   outputs:
     Ruby necklace: 1
-  time: 1.8
+  time: 3
 Ruby Amulets:
   name: "Ruby Amulets"
   inputs:
@@ -26,7 +26,7 @@ Ruby Amulets:
     Ruby: 1
   outputs:
     Ruby amulet (u): 1
-  time: 1.8
+  time: 3
 Emerald Rings:
   name: "Emerald Rings"
   inputs:
@@ -34,7 +34,7 @@ Emerald Rings:
     Emerald: 1
   outputs:
     Emerald ring: 1
-  time: 1.8
+  time: 3
 Emerald Necklaces:
   name: "Emerald Necklaces"
   inputs:
@@ -42,7 +42,7 @@ Emerald Necklaces:
     Emerald: 1
   outputs:
     Emerald necklace: 1
-  time: 1.8
+  time: 3
 Emerald Amulets:
   name: "Emerald Amulets"
   inputs:
@@ -50,7 +50,7 @@ Emerald Amulets:
     Emerald: 1
   outputs:
     Emerald amulet (u): 1
-  time: 1.8
+  time: 3
 Diamond Rings:
   name: "Diamond Rings"
   inputs:
@@ -58,7 +58,7 @@ Diamond Rings:
     Diamond: 1
   outputs:
     Diamond ring: 1
-  time: 1.8
+  time: 3
 Diamond Necklaces:
   name: "Diamond Necklaces"
   inputs:
@@ -66,7 +66,7 @@ Diamond Necklaces:
     Diamond: 1
   outputs:
     Diamond necklace: 1
-  time: 1.8
+  time: 3
 Diamond Amulets:
   name: "Diamond Amulets"
   inputs:
@@ -74,7 +74,7 @@ Diamond Amulets:
     Diamond: 1
   outputs:
     Diamond amulet (u): 1
-  time: 1.8
+  time: 3
 Sapphire Rings:
   name: "Sapphire Rings"
   inputs:
@@ -82,7 +82,7 @@ Sapphire Rings:
     Sapphire: 1
   outputs:
     Sapphire ring: 1
-  time: 1.8
+  time: 3
 Sapphire Necklaces:
   name: "Sapphire Necklaces"
   inputs:
@@ -90,7 +90,7 @@ Sapphire Necklaces:
     Sapphire: 1
   outputs:
     Sapphire necklace: 1
-  time: 1.8
+  time: 3
 Sapphire Amulets:
   name: "Sapphire Amulets"
   inputs:
@@ -98,7 +98,7 @@ Sapphire Amulets:
     Sapphire: 1
   outputs:
     Sapphire amulet (u): 1
-  time: 1.8
+  time: 3
 Humidify Clay:
   name: "Humidify Clay"
   inputs:
@@ -106,7 +106,7 @@ Humidify Clay:
     Clay: 27
   outputs:
     Soft clay: 27
-  time: 3.6
+  time: 6
 Enchanting dragonstone jewellery (Manual):
   name: "Enchanting dragonstone jewellery (Manual)"
   inputs:
@@ -114,7 +114,7 @@ Enchanting dragonstone jewellery (Manual):
     Cosmic rune: 1
   outputs:
     Combat bracelet: 1
-  time: 1.2
+  time: 3
 Enchanting dragonstone jewellery (Autocast):
   name: "Enchanting dragonstone jewellery (Autocast)"
   inputs:
@@ -122,7 +122,7 @@ Enchanting dragonstone jewellery (Autocast):
     Cosmic rune: 1
   outputs:
     Combat bracelet: 1
-  time: 4.2
+  time: 7
 Dismantling bracelets of ethereum:
   name: "Dismantling bracelets of ethereum"
   inputs:
@@ -138,21 +138,21 @@ Charging and alchemising bracelets of ethereum:
     Nature rune: 1
   outputs:
     Coins: 45000
-  time: 7.575
+  time: 13
 Crushing bird nests (Auto):
   name: "Crushing bird nests (Auto)"
   inputs:
     Bird nest: 1
   outputs:
     Crushed nest: 1
-  time: 1.8
+  time: 3
 Crushing bird nests (Manual):
   name: "Crushing bird nests (Manual)"
   inputs:
     Bird nest: 1
   outputs:
     Crushed nest: 1
-  time: 0.6
+  time: 1
 Degriming grimy cadantine:
   name: "Degriming grimy cadantine"
   inputs:
@@ -160,7 +160,7 @@ Degriming grimy cadantine:
     Nature rune: 2
   outputs:
     Cadantine: 27
-  time: 4.8
+  time: 8
 Degriming grimy torstol:
   name: "Degriming grimy torstol"
   inputs:
@@ -168,7 +168,7 @@ Degriming grimy torstol:
     Nature rune: 2
   outputs:
     Torstol: 27
-  time: 4.8
+  time: 8
 Degriming grimy avantoe:
   name: "Degriming grimy avantoe"
   inputs:
@@ -176,7 +176,7 @@ Degriming grimy avantoe:
     Nature rune: 2
   outputs:
     Avantoe: 27
-  time: 4.8
+  time: 8
 Degriming grimy lantadyme:
   name: "Degriming grimy lantadyme"
   inputs:
@@ -184,7 +184,7 @@ Degriming grimy lantadyme:
     Nature rune: 2
   outputs:
     Lantadyme: 27
-  time: 4.8
+  time: 8
 Degriming grimy ranarr weed:
   name: "Degriming grimy ranarr weed"
   inputs:
@@ -192,7 +192,7 @@ Degriming grimy ranarr weed:
     Nature rune: 2
   outputs:
     Ranarr weed: 27
-  time: 4.8
+  time: 8
 Making irit potions:
   name: "Making irit potions"
   inputs:
@@ -200,7 +200,7 @@ Making irit potions:
     Vial of water: 1
   outputs:
     Irit potion (unf): 1
-  time: 0.6
+  time: 2
 Making dwarf weed potions:
   name: "Making dwarf weed potions"
   inputs:
@@ -208,7 +208,7 @@ Making dwarf weed potions:
     Vial of water: 1
   outputs:
     Dwarf weed potion (unf): 1
-  time: 0.6
+  time: 2
 Making lantadyme potions:
   name: "Making lantadyme potions"
   inputs:
@@ -216,7 +216,7 @@ Making lantadyme potions:
     Vial of water: 1
   outputs:
     Lantadyme potion (unf): 1
-  time: 0.6
+  time: 2
 Making cadantine potions:
   name: "Making cadantine potions"
   inputs:
@@ -224,7 +224,7 @@ Making cadantine potions:
     Vial of water: 1
   outputs:
     Cadantine potion (unf): 1
-  time: 0.6
+  time: 2
 Making avantoe potions:
   name: "Making avantoe potions"
   inputs:
@@ -232,7 +232,7 @@ Making avantoe potions:
     Vial of water: 1
   outputs:
     Avantoe potion (unf): 1
-  time: 0.6
+  time: 2
 Making toadflax potions:
   name: "Making toadflax potions"
   inputs:
@@ -240,7 +240,7 @@ Making toadflax potions:
     Vial of water: 1
   outputs:
     Toadflax potion (unf): 1
-  time: 0.6
+  time: 2
 Making kwuarm potions:
   name: "Making kwuarm potions"
   inputs:
@@ -248,7 +248,7 @@ Making kwuarm potions:
     Vial of water: 1
   outputs:
     Kwuarm potion (unf): 1
-  time: 0.6
+  time: 2
 Making ranarr potions:
   name: "Making ranarr potions"
   inputs:
@@ -256,7 +256,7 @@ Making ranarr potions:
     Vial of water: 1
   outputs:
     Ranarr potion (unf): 1
-  time: 0.6
+  time: 2
 Making snapdragon potions:
   name: "Making snapdragon potions"
   inputs:
@@ -264,7 +264,7 @@ Making snapdragon potions:
     Vial of water: 1
   outputs:
     Snapdragon potion (unf): 1
-  time: 0.6
+  time: 2
 Making Guthix rests:
   name: "Making Guthix rests"
   inputs:
@@ -293,7 +293,7 @@ Casting Tan Leather (Black d'hide):
     Black dragonhide: 5
   outputs:
     Black dragon leather: 5
-  time: 1.8
+  time: 3
 Casting Tan Leather (Red d'hide):
   name: "Casting Tan Leather (Red d'hide)"
   inputs:
@@ -302,7 +302,7 @@ Casting Tan Leather (Red d'hide):
     Black dragonhide: 5
   outputs:
     Red dragon leather: 5
-  time: 1.8
+  time: 3
 Making Super energy potions:
   name: "Making Super energy potions"
   inputs:
@@ -310,7 +310,7 @@ Making Super energy potions:
     Mort myre fungus: 1
   outputs:
     Super energy(3): 1
-  time: 0.6
+  time: 2
 Gargoyles (Off-task):
   name: "Gargoyles (Off-task)"
   inputs:
