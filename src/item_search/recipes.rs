@@ -2,7 +2,7 @@
 use serde::{de::Visitor, Deserialize};
 
 use tracing::{info, trace, debug, warn, error};
-use crate::{file_io::{FileIO, FileOptions}, log_match_err};
+use crate::{file_io::{FileIO, FileOptions}, log_match_panic};
 
 use std::{collections::HashMap, fmt::Debug};
 
@@ -20,6 +20,8 @@ pub struct Recipe {
     pub name: String,
     pub inputs: HashMap<String, f32>,
     pub outputs: HashMap<String, f32>,
+
+    #[serde(alias = "time")]
     pub ticks: RecipeTime,
 }
 
@@ -47,6 +49,8 @@ impl<'de> Deserialize<'de> for RecipeTime {
             {
                 Ok(RecipeTime::INVALID)
             }
+
+
             #[allow(clippy::cast_possible_truncation)]
             fn visit_f64<E>(self, v: f64) -> Result<Self::Value, E>
             where
@@ -69,6 +73,7 @@ impl<'de> Deserialize<'de> for RecipeTime {
                 Ok((v as f32).into())
             }
         }
+
         let de = deserializer.deserialize_f32(RecipeTimeVisitor);
         if let Err(e) = de {
             if e.to_string().contains("missing field") {
@@ -122,7 +127,7 @@ impl RecipeBook {
             crate::file_io::SerChoice::YAML
         );
 
-        let mut recipe_list: Vec<Recipe> = log_match_err(
+        let mut recipe_list: Vec<Recipe> = log_match_panic(
             file_output, 
             "Read recipe list from file.", "Failed to load recipes."
         ).into_values().collect();
@@ -135,7 +140,7 @@ impl RecipeBook {
             if r.isvalid() {
                 true
             } else {
-                warn!("Skipping recipe: {}", r.name);
+                warn!(desc = "Skipping recipe.", recipe_name = %r.name);
                 false
             }
         });
@@ -190,6 +195,10 @@ impl RecipeBook {
         rec
     }
 
+    pub fn get_all_recipes(&self) -> HashMap<String, Recipe> {
+        self.recipes.clone()
+    }
+
     pub fn len(&self) -> usize {
         self.recipes.len()
     }
@@ -207,7 +216,11 @@ impl From<HashMap<String, Recipe>> for RecipeBook {
 
 impl RecipeTime {
     pub fn isvalid(&self) -> bool {
-        !matches!(self, Self::INVALID)
+        match self {
+            Self::INVALID => false,
+            _ => true,
+        }
+        // !matches!(self, Self::INVALID)
     }
 }
 

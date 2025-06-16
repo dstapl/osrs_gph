@@ -1,7 +1,7 @@
 use osrs_gph::api::MappingItem;
 use osrs_gph::config::{self, load_config};
 use osrs_gph::file_io::{self, FileOptions, SerChoice};
-use osrs_gph::log_match_err;
+use osrs_gph::log_match_panic;
 use std::collections::HashMap;
 
 
@@ -31,7 +31,7 @@ fn main() {
         );
     trace!(desc = "Created mapping_fio");
 
-    let mapping: Vec<MappingItem> = log_match_err(mapping_fio.read_serialized(SerChoice::JSON),
+    let mapping: Vec<MappingItem> = log_match_panic(mapping_fio.read_serialized(SerChoice::JSON),
         &format!("Reading mapping file {}", mapping_path_str),
         &format!("Failed to parse mapping {}", mapping_path_str)
     );
@@ -55,26 +55,26 @@ fn main() {
         trace!(mapping = "name_to_id", value = ?val);
     }
 
-    trace!(desc = "Setting mapping_fio file path", value = ?id_to_name_str);
+    trace!(desc = "Setting mapping_fio file path", value = %id_to_name_str);
     let _ = mapping_fio.set_file_path(id_to_name_str);
 
-    let _ = log_match_err(mapping_fio.clear_contents(),
+    let _ = log_match_panic(mapping_fio.clear_contents(),
         "Clearing file contents.",
         "Failed to clear file contents."
     );
-    let _ = log_match_err(mapping_fio.write_serialized(&id_to_name),
+    let _ = log_match_panic(mapping_fio.write_serialized(&id_to_name),
         "Writing serialised data to id_to_name file.",
         "Failed to write data."
     );
 
-    trace!(desc = "Setting mapping_fio file path", value = ?name_to_id_str);
+    trace!(desc = "Setting mapping_fio file path", value = %name_to_id_str);
     let _ = mapping_fio.set_file_path(name_to_id_str);
 
-    let _ = log_match_err(mapping_fio.clear_contents(),
+    let _ = log_match_panic(mapping_fio.clear_contents(),
         "Clearing file contents.",
         "Failed to clear file contents."
     );
-    let _ = log_match_err(mapping_fio.write_serialized(&name_to_id),
+    let _ = log_match_panic(mapping_fio.write_serialized(&name_to_id),
         "Writing serialised data to name_to_id file.",
         "Failed to write data."
     );

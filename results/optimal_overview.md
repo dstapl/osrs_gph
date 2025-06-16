@@ -1,30 +1,25 @@
-| Method                                         | Loss/Gain | Total Loss/Gain | Time (h) |           GP/h |
-|------------------------------------------------|-----------|-----------------|----------|----------------|
-| Making irit potions                            |       410 |       1,196,380 |     0.49 |      2,459,999 |
-| Making snapdragon potions                      |       393 |         208,290 |     0.09 |      2,357,999 |
-| Making dwarf weed potions                      |       270 |         403,920 |     0.25 |      1,619,999 |
-| Making avantoe potions                         |       242 |         229,658 |     0.16 |      1,451,999 |
-| Enchanting dragonstone jewellery (Manual)      |       428 |         152,368 |     0.12 |      1,283,999 |
-| Making cadantine potions                       |       120 |         115,440 |     0.16 |        719,999 |
-| Making toadflax potions                        |       111 |         122,655 |     0.18 |        665,999 |
-| Making lantadyme potions                       |        94 |         263,200 |     0.47 |        563,999 |
-| Enchanting dragonstone jewellery (Autocast)    |       428 |         152,368 |     0.42 |        366,857 |
-| Making ranarr potions                          |        41 |          24,600 |      0.1 |        245,999 |
-| Diamond Necklaces                              |       215 |         524,600 |     1.22 |        430,000 |
-| Charging and alchemising bracelets of ethereum |       385 |          36,575 |      0.2 |        182,970 |
-| Casting Tan Leather (Black d'hide)             |        56 |          15,008 |     0.13 |        112,000 |
-| Humidify Clay                                  |       375 |         589,125 |     1.57 |        375,000 |
-| Diamond Rings                                  |       148 |         361,120 |     1.22 |        296,000 |
-| Making kwuarm potions                          |        10 |           8,830 |     0.15 |         59,999 |
-| Ruby Amulets                                   |       230 |       1,062,600 |     2.31 |        460,000 |
-| Degriming grimy lantadyme                      |        24 |           2,640 |     0.15 |         17,999 |
-| Diamond Amulets                                |       111 |         270,840 |     1.22 |        222,000 |
-| Emerald Rings                                  |       395 |       3,331,035 |     4.22 |        790,000 |
-| Ruby Rings                                     |       143 |         660,660 |     2.31 |        286,000 |
-| Ruby Necklaces                                 |       127 |         586,740 |     2.31 |        254,000 |
-| Emerald Necklaces                              |       131 |       1,104,723 |     4.22 |        262,000 |
-| Emerald Amulets                                |        76 |         640,908 |     4.22 |        152,000 |
-| Sapphire Necklaces                             |       138 |       1,783,374 |     6.46 |        276,000 |
-| Sapphire Rings                                 |       122 |       1,576,606 |     6.46 |        244,000 |
-| Sapphire Amulets                               |        76 |         982,148 |     6.46 |        152,000 |
-| Gargoyles (Off-task)                           |   615,081 |     168,532,194 |       -0 | -2,147,483,648 |
+| Method | Loss/Gain | (Total) Loss/Gain | Time (Hours) | GP/H |
+|---|---|---|---|---|
+|Casting Tan Leather (Black d'hide) | 845 | 153,790 | 0.15 | 1,013,999|
+|Degriming grimy cadantine | 2,129 | 83,031 | 0.09 | 958,049|
+|Degriming grimy torstol | 1,802 | 46,852 | 0.06 | 810,899|
+|Making snapdragon potions | 193 | 57,514 | 0.17 | 347,399|
+|Making ranarr potions | 129 | 53,277 | 0.23 | 232,199|
+|Making kwuarm potions | 121 | 95,832 | 0.44 | 217,799|
+|Making avantoe potions | 103 | 80,752 | 0.44 | 185,399|
+|Humidify Clay | 763 | 901,103 | 1.97 | 457,799|
+|Diamond Necklaces | 169 | 266,006 | 1.31 | 202,799|
+|Diamond Rings | 149 | 234,526 | 1.31 | 178,799|
+|Making dwarf weed potions | 5 | 4,690 | 0.52 | 8,999|
+|Diamond Amulets | 112 | 176,288 | 1.31 | 134,399|
+|Ruby Necklaces | 197 | 624,096 | 2.64 | 236,399|
+|Ruby Amulets | 159 | 503,712 | 2.64 | 190,799|
+|Ruby Rings | 150 | 475,200 | 2.64 | 179,999|
+|Emerald Necklaces | 186 | 1,089,216 | 4.88 | 223,199|
+|Emerald Rings | 180 | 1,054,080 | 4.88 | 215,999|
+|Emerald Amulets | 131 | 767,136 | 4.88 | 157,199|
+|Sapphire Necklaces | 175 | 1,421,875 | 6.77 | 209,999|
+|Sapphire Rings | 143 | 1,161,875 | 6.77 | 171,599|
+|Sapphire Amulets | 139 | 1,129,375 | 6.77 | 166,799|
+,675 | 7.31 | 140,399|
+|Sapphire Amulets | 72 | 631,800 | 7.31 | 86,399|

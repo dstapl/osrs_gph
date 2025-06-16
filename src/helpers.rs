@@ -23,7 +23,16 @@ fn flush_stout() {
     std::io::stdout().flush().ok();
 }
 
+pub fn number_to_comma_sep_string<T: num_format::ToFormattedStr>(x: &T) -> String {
+    // Create a stack-allocated buffer...
+    let mut buf = num_format::Buffer::default();
 
+    // Write "1,000,000" into the buffer...
+    buf.write_formatted(x, &num_format::Locale::en);
+
+    // Get a view into the buffer as a &str...
+    buf.to_string()
+}
 
 
 pub trait Input {

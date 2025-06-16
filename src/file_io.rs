@@ -1,5 +1,6 @@
 use serde::{Deserialize, Serialize};
 use tracing_subscriber::fmt::MakeWriter;
+use std::fmt;
 use std::fs::{File, Metadata};
 use std::io::{self, BufReader, BufWriter, Seek};
 // use std::sync::Arc;
@@ -8,7 +9,7 @@ use std::path::Path;
 
 use tracing::{debug, instrument, trace};
 
-use crate::log_match_err;
+use crate::log_match_panic;
 
 #[derive(Debug)]
 pub enum SerChoice {
@@ -95,16 +96,9 @@ impl MakeWriter<'_> for FileIO {
 
 impl FileIO {
     pub fn new(filename: String, options: FileOptions) -> Self {
-        // let file = std::fs::OpenOptions::new()
-        //     .read(options.read)
-        //     .write(options.write)
-        //     .create(options.create)
-        //     .open(filename)
-        //     .expect("Failed to deserialize file contents");
         let file = Self::_file_with_options(filename, &options);
 
         Self {
-            // filename,
             options,
             buf_size: 8192usize, // Default capacity for BufRead/Writer
             file  // Temporary file
@@ -173,7 +167,7 @@ impl FileIO {
         }
 
         // TODO: Change to a *trace* log
-        log_match_err(self.file.rewind(), 
+        log_match_panic(self.file.rewind(), 
             "Rewinding cursor...", 
             "Failed to rewind cursor.")
         // self.file.rewind().expect("Error rewinding cursor")

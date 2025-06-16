@@ -21,18 +21,22 @@ use tracing_subscriber::{
 };
 
 
-pub fn log_match_err<R: std::any::Any + std::fmt::Debug, E: std::any::Any + std::fmt::Debug>(expr: Result<R, E>, desc: &str, err_msg: &str) -> R{
+pub fn log_match_panic<R: std::any::Any + std::fmt::Debug, E: std::any::Any + std::fmt::Debug>(expr: Result<R, E>, desc: &str, err_msg: &str) -> R{
     let res: R = match expr {
         // TODO: Include result in log or not?
         //  Becomes very large for matching on files...
-        Ok(res) => {debug!(desc = ?desc); res},
+        Ok(res) => {debug!(desc = %desc); res},
         Err(e) => {
-            error!(desc = ?err_msg, reason = ?e);
-            panic!("{}", err_msg);
+            log_panic(err_msg, e);
         },
     };
 
     res
+}
+
+pub fn log_panic<E: std::fmt::Debug>(desc: &str, reason: E) -> ! {
+    error!(name = "PANIC", desc = %desc, reason = ?reason);
+    panic!("{:?}", desc);
 }
 
 pub fn make_subscriber(filepath: String, log_level: Level) -> impl tracing::Subscriber {

@@ -33,7 +33,7 @@ pub struct Api {
     pub auth_headers: HashMap<String, String>,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, Clone)]
 pub struct LookupDataPaths {
     pub id_to_name: String,
     pub name_to_id: String,
@@ -41,13 +41,13 @@ pub struct LookupDataPaths {
     pub recipes: String,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, Clone)]
 pub struct ResultsPaths {
     pub optimal: String,
     pub lookup: String,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, Clone)]
 pub struct FilePaths {
     pub price_data: String,
     pub lookup_data: LookupDataPaths,
