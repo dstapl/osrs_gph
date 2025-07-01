@@ -1,3 +1,5 @@
 /target
 /src/bin/wiki_info/*.html
 *.log
+*.svg*
+*.bat*

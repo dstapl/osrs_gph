@@ -75,12 +75,12 @@ type Weights = [f32;4];
 //
 //     #[must_use]
 //     pub fn compute_weights(coins: i32, config_weights: [f32; 3]) -> Weights {
-//         let [margin_to_time, time, gp_h] = config_weights;
+//         let [margin, time, gp_h] = config_weights;
 //
 //         #[allow(clippy::cast_precision_loss)]
 //         let denom = 10_f32.powf((coins as f32).log10() - 1.);
 //
-//         let money_to_time = (margin_to_time, 1./denom);
+//         let money_to_time = (margin, 1./denom);
 //         let ratio = 1./(money_to_time.0 + money_to_time.1);
 //
 //         [money_to_time.0/ratio, money_to_time.1/ratio, time, gp_h]
@@ -147,9 +147,10 @@ pub mod custom_types {
 
     /// Modifying function
     pub fn optimal_sort(table: &Table, weights: &Weights, reverse: bool) -> Table{
-        let norm_weights = normalize_weights(weights); // Normalize
+        // let norm_weights = normalize_weights(weights); // Normalize
                                                    // Return sorted based on ls_compare function
         // let norm_weights = *weights;
+        let norm_weights = weights;
         let row_list = if reverse {
             table.iter().sorted_by(|a, b| ls_compare(b, a, &norm_weights)) // Might need to change to cmp::Reverse
         } else {
@@ -164,19 +165,17 @@ pub mod custom_types {
         
     }
 
+    // TODO: What is the reasoning for this?
     pub fn compute_weights(coins: i32, config_weights: crate::config::Weights) -> Weights {
-        // let [margin_to_time, time, gp_h] = config_weights;
-        let margin_to_time = config_weights.margin_to_time;
+        // let [margin, time, gp_h] = config_weights;
+        let margin = config_weights.margin;
         let time = config_weights.time;
         let gp_h = config_weights.gph;
 
-        #[allow(clippy::cast_precision_loss)]
-        let denom = 10_f32.powf((coins as f32).log10() - 1.);
+        let money_to_time = (margin, 10.0 / (coins as f32));
+        let factor = money_to_time.0 + money_to_time.1;
 
-        let money_to_time = (margin_to_time, 1./denom);
-        let ratio = 1./(money_to_time.0 + money_to_time.1);
-
-        [money_to_time.0/ratio, money_to_time.1/ratio, time, gp_h]
+        [money_to_time.0 * factor, money_to_time.1 * factor, time, gp_h]
     }
 
     /// Normalise weights

@@ -58,7 +58,7 @@ pub struct FilePaths {
 
 #[derive(Deserialize, Debug)]
 pub struct Weights {
-    pub margin_to_time: f32,
+    pub margin: f32,
     pub time: f32,
     pub gph: f32,
 }
@@ -175,7 +175,7 @@ impl Default for FilePaths {
 impl Default for Weights {
     fn default() -> Self {
         Self {
-            margin_to_time: 1e-2,
+            margin: 1e-2,
             time: -2.0,
             gph: 1e-5,
         }
