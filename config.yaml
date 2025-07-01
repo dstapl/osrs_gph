@@ -29,7 +29,7 @@ profit:
   coins: 2_852_000
   percent_margin: 2.5
   weights:
-    margin_to_time: 1.e-2
+    margin: 1.e-2
     time: -2.0
     gph: 1.e-5
 

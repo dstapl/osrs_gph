@@ -1,25 +1,25 @@
 | Method | Loss/Gain | (Total) Loss/Gain | Time (Hours) | GP/H |
 |---|---|---|---|---|
-|Casting Tan Leather (Black d'hide) | 845 | 153,790 | 0.15 | 1,013,999|
-|Degriming grimy cadantine | 2,129 | 83,031 | 0.09 | 958,049|
-|Degriming grimy torstol | 1,802 | 46,852 | 0.06 | 810,899|
-|Making snapdragon potions | 193 | 57,514 | 0.17 | 347,399|
-|Making ranarr potions | 129 | 53,277 | 0.23 | 232,199|
-|Making kwuarm potions | 121 | 95,832 | 0.44 | 217,799|
-|Making avantoe potions | 103 | 80,752 | 0.44 | 185,399|
-|Humidify Clay | 763 | 901,103 | 1.97 | 457,799|
-|Diamond Necklaces | 169 | 266,006 | 1.31 | 202,799|
-|Diamond Rings | 149 | 234,526 | 1.31 | 178,799|
-|Making dwarf weed potions | 5 | 4,690 | 0.52 | 8,999|
-|Diamond Amulets | 112 | 176,288 | 1.31 | 134,399|
-|Ruby Necklaces | 197 | 624,096 | 2.64 | 236,399|
-|Ruby Amulets | 159 | 503,712 | 2.64 | 190,799|
-|Ruby Rings | 150 | 475,200 | 2.64 | 179,999|
-|Emerald Necklaces | 186 | 1,089,216 | 4.88 | 223,199|
-|Emerald Rings | 180 | 1,054,080 | 4.88 | 215,999|
-|Emerald Amulets | 131 | 767,136 | 4.88 | 157,199|
-|Sapphire Necklaces | 175 | 1,421,875 | 6.77 | 209,999|
-|Sapphire Rings | 143 | 1,161,875 | 6.77 | 171,599|
-|Sapphire Amulets | 139 | 1,129,375 | 6.77 | 166,799|
-,675 | 7.31 | 140,399|
-|Sapphire Amulets | 72 | 631,800 | 7.31 | 86,399|
+|Degriming grimy torstol | 3,115 | 74,760 | 0.05 | 1,401,749|
+|Making avantoe potions | 291 | 243,567 | 0.47 | 523,799|
+|Making toadflax potions | 266 | 199,766 | 0.42 | 478,799|
+|Enchanting dragonstone jewellery (Manual) | 247 | 59,527 | 0.2 | 296,399|
+|Making snapdragon potions | 119 | 29,512 | 0.14 | 214,199|
+|Making cadantine potions | 140 | 117,460 | 0.47 | 251,999|
+|Casting Tan Leather (Black d'hide) | 119 | 20,825 | 0.15 | 142,799|
+|Making dwarf weed potions | 119 | 114,954 | 0.54 | 214,199|
+|Making kwuarm potions | 105 | 79,800 | 0.42 | 188,999|
+|Enchanting dragonstone jewellery (Autocast) | 247 | 59,527 | 0.47 | 127,028|
+|Making ranarr potions | 17 | 6,596 | 0.22 | 30,599|
+|Humidify Clay | 334 | 377,086 | 1.88 | 200,399|
+|Diamond Necklaces | 56 | 85,624 | 1.27 | 67,199|
+|Diamond Amulets | 10 | 15,290 | 1.27 | 11,999|
+|Ruby Necklaces | 93 | 269,235 | 2.41 | 111,599|
+|Ruby Amulets | 79 | 228,705 | 2.41 | 94,799|
+|Ruby Rings | 22 | 63,690 | 2.41 | 26,399|
+|Emerald Amulets | 257 | 1,398,594 | 4.54 | 308,399|
+|Emerald Necklaces | 132 | 718,344 | 4.54 | 158,399|
+|Emerald Rings | 124 | 674,808 | 4.54 | 148,799|
+|Sapphire Rings | 95 | 705,565 | 6.19 | 113,999|
+|Sapphire Necklaces | 86 | 638,722 | 6.19 | 103,199|
+|Sapphire Amulets | 68 | 505,036 | 6.19 | 81,599|
