@@ -1,3 +1,4 @@
+use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 use tracing_subscriber::fmt::MakeWriter;
 use std::fmt;
@@ -199,11 +200,10 @@ impl FileIO {
         data: &J,
     ) -> Result<(), std::io::Error> {
         let buffer = self.get_writer()?;
-        let mut serialiser = serde_yml::ser::Serializer::new(buffer);
 
-        // DEBUG
-        let now = Instant::now();
-        data.serialize(&mut serialiser).expect("Failed to write to file");
+        let now = Instant::now(); // DEBUG
+        serde_yaml_ng::to_writer(buffer, data)
+            .expect("Failed to write to file");
         println!("Wrote file in {:?}", now.elapsed()); // DEBUG
 
         Ok(())
@@ -211,7 +211,7 @@ impl FileIO {
 
     /// # Errors
     /// Errors when the file does not exist or deserialization fails.
-    pub fn read_serialized<'de, T: Deserialize<'de>>(&mut self, ser: SerChoice) -> Result<T, std::io::Error> {
+    pub fn read_serialized<'de, T: DeserializeOwned>(&mut self, ser: SerChoice) -> Result<T, std::io::Error> {
         let buffer = self.get_reader()?;
 
         let t = match ser {
@@ -220,8 +220,8 @@ impl FileIO {
                 T::deserialize(&mut deserialiser).expect("Failed to read from file")
             },
             SerChoice::YAML => {
-                let deserialiser = serde_yml::de::Deserializer::from_reader(buffer);
-                T::deserialize(deserialiser).expect("Failed to read from file")
+                let data_result = serde_yaml_ng::from_reader(buffer);
+                data_result.expect("Failed to read from file")
             }
         };
 

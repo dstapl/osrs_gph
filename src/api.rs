@@ -157,7 +157,7 @@ impl Api {
         // Decode response
         let buffer = BufReader::new(res.by_ref());
         let item_prices = log_match_panic(
-            serde_yml::de::from_reader(buffer),
+            serde_yaml_ng::from_reader(buffer),
             "Deserializing API response",
             "Failed to deserialize API response",
         );
