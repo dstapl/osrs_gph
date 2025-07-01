@@ -249,7 +249,7 @@ impl Default for Levels {
 #[derive(Debug)]
 pub enum ConfigError {
     FileError(std::io::Error),
-    DeserializeError(serde_yml::Error),
+    DeserializeError(serde_yaml_ng::Error),
 }
 
 impl From<std::io::Error> for ConfigError {
@@ -257,8 +257,8 @@ impl From<std::io::Error> for ConfigError {
         ConfigError::FileError(value)
     }
 }
-impl From<serde_yml::Error> for ConfigError {
-    fn from(value: serde_yml::Error) -> Self {
+impl From<serde_yaml_ng::Error> for ConfigError {
+    fn from(value: serde_yaml_ng::Error) -> Self {
         ConfigError::DeserializeError(value)
     }
 }
@@ -266,7 +266,7 @@ impl From<serde_yml::Error> for ConfigError {
 pub fn load_config<P: AsRef<std::path::Path>>(filepath: P) -> Config {
     File::open(&filepath)
         .map_err(ConfigError::FileError)
-        .and_then(|file| serde_yml::from_reader(file).map_err(ConfigError::DeserializeError))
+        .and_then(|file| serde_yaml_ng::from_reader(file).map_err(ConfigError::DeserializeError))
         .unwrap_or_else(|e| panic!("{e:?}"))
 }
 
