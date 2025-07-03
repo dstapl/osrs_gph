@@ -1,7 +1,4 @@
-/// Pareto sort implementation
-///
-
-
+//! Pareto sort implementation
 
 type Weights = [f32;4];
 
@@ -103,7 +100,7 @@ pub mod custom_types {
     use std::cmp::Ordering;
 
     use itertools::Itertools;
-    use crate::prices::prices::{Row, _TableRow, Table};
+    use crate::prices::prices::{_TableRow, Table};
 
     pub type Weights = super::Weights;
 
@@ -153,9 +150,9 @@ pub mod custom_types {
         // let norm_weights = *weights;
         let norm_weights = weights;
         let row_list = if reverse {
-            table.iter().sorted_by(|a, b| ls_compare(b, a, &norm_weights)) // Might need to change to cmp::Reverse
+            table.iter().sorted_by(|a, b| ls_compare(b, a, norm_weights)) // Might need to change to cmp::Reverse
         } else {
-            table.iter().sorted_by(|a, b| ls_compare(a, b, &norm_weights))
+            table.iter().sorted_by(|a, b| ls_compare(a, b, norm_weights))
         };
         
         let mut output_table = Table::new();

@@ -1,12 +1,12 @@
 //! Parsing items from [api](src/api.rs) data
 //! TODO: Support for different modules (timespans) other than just latest
 use super::data_types::latest::{self, PriceDataType};//::PriceDatum;
-use super::recipes; 
+ 
 
-use tracing::{debug, error, info, instrument, span, trace, warn, Level};
+use tracing::{debug, instrument, warn};
 
-use serde::{de::Visitor, Deserialize};
-use std::{collections::HashMap, fmt::Debug, hash::Hash, path::Path};
+use serde::Deserialize;
+use std::{collections::HashMap, fmt::Debug, hash::Hash};
 
 
 use crate::file_io::{FileIO, FileOptions};

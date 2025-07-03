@@ -6,11 +6,11 @@ use crate::{
     }
 };
 
-use std::{collections::HashMap, path::Path, fmt::Display};
+use std::collections::HashMap;
 
 use super::pareto_sort::custom_types::{Weights, optimal_sort};
 
-use tracing::{warn, debug, trace, info};
+use tracing::{warn, debug};
 
 use crate::helpers::number_to_comma_sep_string;
 
@@ -64,7 +64,7 @@ impl PriceHandle {
 
         let mut all_recipe_details = Table::new();
 
-        let coins = self.coins.clone();
+        let coins = self.coins;
         for (recipe_name, overview) in all_recipe_prices{
             if !overview.3.isvalid() {
                 warn!(desc = "INVALID RecipeTime", name = %recipe_name);
