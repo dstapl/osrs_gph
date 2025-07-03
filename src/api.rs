@@ -3,10 +3,10 @@ use std::{collections::HashMap, io::{BufReader, Read}};
 use reqwest::{blocking, header::HeaderMap};
 use serde::Deserialize;
 
-use crate::{config::Config, item_search::data_types, log_match_panic, log_panic
+use crate::{item_search::data_types, log_match_panic, log_panic
 };
 
-use tracing::{debug, error, info, instrument, span, trace, warn};
+use tracing::{instrument, trace, warn};
 
 
 #[derive(Debug, Deserialize)]
@@ -156,13 +156,12 @@ impl Api {
 
         // Decode response
         let buffer = BufReader::new(res.by_ref());
-        let item_prices = log_match_panic(
+        
+        log_match_panic(
             serde_yaml_ng::from_reader(buffer),
             "Deserializing API response",
             "Failed to deserialize API response",
-        );
-        
-        item_prices
+        )
     }
 
     /// Wrapper around [`self.request_item_prices`]

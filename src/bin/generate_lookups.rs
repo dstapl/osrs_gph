@@ -5,7 +5,7 @@ use osrs_gph::log_match_panic;
 use std::collections::HashMap;
 
 
-use tracing::{debug, info, error, span, trace, warn, Level};
+use tracing::{debug, span, trace, Level};
 
 fn main() {
     let config_file_name = "config.yaml";
@@ -56,25 +56,25 @@ fn main() {
     }
 
     trace!(desc = "Setting mapping_fio file path", value = %id_to_name_str);
-    let _ = mapping_fio.set_file_path(id_to_name_str);
+    mapping_fio.set_file_path(id_to_name_str);
 
-    let _ = log_match_panic(mapping_fio.clear_contents(),
+    log_match_panic(mapping_fio.clear_contents(),
         "Clearing file contents.",
         "Failed to clear file contents."
     );
-    let _ = log_match_panic(mapping_fio.write_serialized(&id_to_name),
+    log_match_panic(mapping_fio.write_serialized(&id_to_name),
         "Writing serialised data to id_to_name file.",
         "Failed to write data."
     );
 
     trace!(desc = "Setting mapping_fio file path", value = %name_to_id_str);
-    let _ = mapping_fio.set_file_path(name_to_id_str);
+    mapping_fio.set_file_path(name_to_id_str);
 
-    let _ = log_match_panic(mapping_fio.clear_contents(),
+    log_match_panic(mapping_fio.clear_contents(),
         "Clearing file contents.",
         "Failed to clear file contents."
     );
-    let _ = log_match_panic(mapping_fio.write_serialized(&name_to_id),
+    log_match_panic(mapping_fio.write_serialized(&name_to_id),
         "Writing serialised data to name_to_id file.",
         "Failed to write data."
     );

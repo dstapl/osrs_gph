@@ -1,14 +1,10 @@
-/// TODO: 2025-06-16 Something weird is happening with the log...
-/// Unless the file is manually cleared, the contents will still remain
+//! TODO: 2025-06-16 Something weird is happening with the log...
+//! Unless the file is manually cleared, the contents will still remain
 
-use std::{collections::HashMap, fs::{File, OpenOptions}, io};
+use std::{collections::HashMap, io::{self, Write}};
 
-use osrs_gph::{api::{self, Api}, config, file_io::{FileIO, FileOptions}, helpers::Input, item_search::recipes::{Recipe, RecipeBook}, log_match_panic, log_panic, prices::prices::PriceHandle, types::{Row, ROW_HEADERS}};
-use tracing::{debug, error, info, instrument, span, trace, warn, Level};
-
-
-use std::io::Write;
-use itertools::Itertools; // For iterator Join
+use osrs_gph::{api::Api, config, file_io::{FileIO, FileOptions}, helpers::Input, item_search::recipes::RecipeBook, log_match_panic, log_panic, prices::prices::PriceHandle, types::ROW_HEADERS};
+use tracing::{info, instrument, span, trace, warn, Level};
 
 
 fn main() {
@@ -97,7 +93,7 @@ fn main() {
     file.set_file_path(conf.filepaths.results.optimal.clone());
 
 
-    let _ = log_match_panic(
+    log_match_panic(
         file.clear_contents(),
         "Cleared file contents",
         "Failed to clear file contents"
@@ -105,17 +101,31 @@ fn main() {
 
     trace!(desc = "Writing overview to file");
     // TODO: Use traits from types.rs
-    let _ = log_match_panic(
-        write_markdown(&mut file, optimal_overview),
+    log_match_panic(
+        write_markdown(&mut file, &optimal_overview),
         "Wrote table to optimal_overview",
         "Failed to write table to optimal_overview"
     );
 
     trace!(desc = "Creating recipe lookups");
-    // let recipe_lookups = price_handle.recipe_lookups();
-    // let recipe_lookups = todo!("Implement recipe lookups");
 
-    let recipe_lookup_list: Vec<_> = conf.display.lookup.specific.clone()
+    // Get top n from the optimal overview
+    let mut recipe_lookup_list: Vec<(String, Vec<Vec<String>>)> =
+       optimal_overview.iter()
+       // TODO: Make config load a usize not u32 for top n
+       .take(
+           conf.display.lookup.top
+           .try_into()
+           .expect("Number of values to take from top of optimal overview exceeds usize limit"))
+        .filter_map(|row| {
+            let recipe_s = row[0].clone();
+            let x = price_handle.recipe_list.get_recipe(&recipe_s)?;
+            let specific_lookup = price_handle.recipe_lookup_from_recipe(x)?;
+            Some((recipe_s, specific_lookup))
+        })
+    .collect();
+
+    let recipe_lookup_list_specific: Vec<_> = conf.display.lookup.specific.clone()
         .into_iter()
         .filter_map(|recipe_s| {
             let x = price_handle.recipe_list.get_recipe(&recipe_s)?;
@@ -124,12 +134,14 @@ fn main() {
         })
     .collect();
 
+    recipe_lookup_list.extend(recipe_lookup_list_specific);
+
     trace!(desc = "Changing file path to recipe lookup results file");
     // Write out to file
     file.set_file_path(conf.filepaths.results.lookup.clone());
 
     // Clear file contents then append since loop
-    let _ = log_match_panic(
+    log_match_panic(
         file.clear_contents(),
         "Cleared file contents",
         "Failed to clear file contents"
@@ -140,7 +152,7 @@ fn main() {
     trace!(desc = "Writing detailed recipe lookups to file");
     for (recipe_name, recipe_lookup) in recipe_lookup_list {
         // TODO: Error message
-        let _ = log_match_panic(
+        log_match_panic(
             write_recipe_lookup(&mut file, &recipe_name, recipe_lookup),
             &format!("Wrote recipe lookup for {recipe_name}"),
             &format!("Failed to write recipe lookup for {recipe_name}"),
@@ -168,27 +180,7 @@ fn request_new_prices_from_api(api_settings: &config::Api, file: &mut FileIO) {
 
 // TODO: Takes in a nested iterator
 #[instrument(level = "trace", skip(file, data))]
-// fn write_markdown(file: &mut FileIO, data: osrs_gph::prices::prices::Table) -> io::Result<()> {
-//     // Write header
-//     let mut file: File = file.open_file().expect("Failed to access inner file");
-//     writeln!(&mut file, "| {} |", ROW_HEADERS.join(" | "))?;
-//
-//     // Write separator
-//     let header_sep_line = ROW_HEADERS.iter()
-//         .map(|_| "---")
-//         .collect::<Vec<_>>()
-//         .join("|");
-//
-//     writeln!(&mut file, "|{}|", header_sep_line)?;
-//
-//     // Write rows
-//     for row in data.into_iter() {
-//         writeln!(&mut file, "|{}|", row.into_iter().join(" | "))?;
-//     }
-//
-//     Ok(())
-// }
-fn write_markdown(file: &mut FileIO, data: osrs_gph::prices::prices::Table) -> io::Result<()> {
+fn write_markdown(file: &mut FileIO, data: &osrs_gph::prices::prices::Table) -> io::Result<()> {
     // Open the underlying file handle
     let mut file = file.open_file().expect("Failed to access inner file");
 
@@ -203,7 +195,7 @@ fn write_markdown(file: &mut FileIO, data: osrs_gph::prices::prices::Table) -> i
     }
 
     // Check all data rows lengths
-    for row in &data {
+    for row in data {
         for (i, cell) in row.iter().enumerate() {
             col_widths[i] = col_widths[i].max(cell.len());
         }

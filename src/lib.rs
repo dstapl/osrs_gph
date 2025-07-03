@@ -12,11 +12,11 @@ pub mod helpers;
 pub mod config;
 
 
-use std::sync::{Arc, Mutex};
+use std::sync::Mutex;
 
-use tracing::{debug, error, instrument::WithSubscriber, level_filters::LevelFilter, Level};
+use tracing::{debug, error, level_filters::LevelFilter, Level};
 use tracing_subscriber::{
-    fmt::format::FmtSpan, layer::SubscriberExt, Layer
+    layer::SubscriberExt, Layer
     // prelude::*,
 };
 
@@ -48,7 +48,9 @@ pub fn make_subscriber(filepath: String, log_level: Level) -> impl tracing::Subs
     // Clear file now the subscriber is initialised
     log_file.clear_contents().expect("Failed to clear log file contents");
 
-    let subscriber = tracing_subscriber::registry()
+    
+
+    tracing_subscriber::registry()
         .with(
             tracing_subscriber::fmt::layer()
             .with_ansi(false) // Disable colour codes in text
@@ -64,7 +66,4 @@ pub fn make_subscriber(filepath: String, log_level: Level) -> impl tracing::Subs
                 LevelFilter::from_level(log_level)
             )
         )
-        ;
-
-    subscriber
 }

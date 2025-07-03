@@ -1,7 +1,7 @@
 //! Handling recipes defined in lookup_data/recipes.yaml
 use serde::{de::Visitor, Deserialize};
 
-use tracing::{info, trace, debug, warn, error};
+use tracing::{trace, debug, warn};
 use crate::{file_io::{FileIO, FileOptions}, log_match_panic};
 
 use std::{collections::HashMap, fmt::Debug};
@@ -216,21 +216,17 @@ impl From<HashMap<String, Recipe>> for RecipeBook {
 
 impl RecipeTime {
     pub fn isvalid(&self) -> bool {
-        match self {
-            Self::INVALID => false,
-            _ => true,
-        }
-        // !matches!(self, Self::INVALID)
+        !matches!(self, Self::INVALID)
     }
 }
 
-impl ToString for RecipeTime {
-    fn to_string(&self) -> String {
+impl std::fmt::Display for RecipeTime {
+   fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            RecipeTime::Time(t) => format!("{t}"),
-            RecipeTime::INVALID => String::new()
+            RecipeTime::Time(t) => write!(f, "{t}"),
+            RecipeTime::INVALID => write!(f, ""),
         }
-    }
+   } 
 }
 
 impl<F: Into<f32>> From<F> for RecipeTime {

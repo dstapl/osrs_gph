@@ -46,10 +46,12 @@ display:
   lookup: # For recipe_lookup.md
     # Number of entries from optimal_overview to lookup in recipe_lookup
     # (0 == None / Disabled)
-    top: 3
+    top: 0
     # Specific entries which might not be in the top bracket
     specific:
       - Smelting Steel Bars
+      - Smelting Mithril Bars
+      - Smelting Adamantite Bars
 
   # Filtering results (Backend)
   must_profit: true

@@ -4,7 +4,7 @@ use std::iter::zip;
 use std::path::Path;
 use std::fs::File;
 use reqwest::{IntoUrl, header};
-use scraper::{node::Element, ElementRef, Html, Selector};
+use scraper::{ElementRef, Html, Selector};
 
 use std::ops::Not;
 use osrs_gph::config::{self, Config, Levels};
@@ -18,26 +18,26 @@ enum HTMLError<'a> {
 #[derive(Debug)]
 #[allow(dead_code)]
 enum Errors<'a> {
-    RequestError(reqwest::Error),
-    IoError(std::io::Error),
-    HTMLError(HTMLError<'a>),
+    Request(reqwest::Error),
+    Io(std::io::Error),
+    Html(HTMLError<'a>),
 }
 
 impl<'a> From<reqwest::Error> for Errors<'a> {
     fn from(value: reqwest::Error) -> Self {
-        Errors::RequestError(value)
+        Errors::Request(value)
     } 
 }
 
 impl<'a> From<std::io::Error> for Errors<'a> {
     fn from(value: std::io::Error) -> Self {
-        Errors::IoError(value)
+        Errors::Io(value)
     } 
 }
 
 impl<'a> From<HTMLError<'a>> for Errors<'a> {
     fn from(value: HTMLError<'a>) -> Self {
-        Errors::HTMLError(value)
+        Errors::Html(value)
     } 
 }
 
@@ -51,13 +51,13 @@ impl<'a> From<scraper::error::SelectorErrorKind<'a>> for HTMLError<'a> {
 fn retrieve_webpage<'a, S: IntoUrl>(url: S, overwrite: bool) -> Result<String, Errors<'a>> {
     // Check if exists as a file already
     let path: &Path = Path::new("src\\bin\\wiki_info\\Money_making_guide.html");
-    let read_from_file: bool = path.try_exists().is_ok_and(|x| x == true);
+    let read_from_file: bool = path.try_exists().is_ok_and(|x| x);
 
     // If file doesn't exist and not overwriting...
     // then skip to requesting the webpage
     let body = if (!overwrite) && read_from_file {
         // Read from existing file
-        let mut file = match File::open(&path) {
+        let mut file = match File::open(path) {
             Err(why) => panic!("couldn't open {}: {}", path.display(), why),
             Ok(file) => file,
         };
@@ -81,7 +81,7 @@ fn retrieve_webpage<'a, S: IntoUrl>(url: S, overwrite: bool) -> Result<String, E
 
     if overwrite || (!read_from_file) {
         // Overwrite file with new body data
-        let mut file = match File::create(&path) {
+        let mut file = match File::create(path) {
             Err(why) => panic!("couldn't write to {}: {}", path.display(), why),
             Ok(file) => file,
         };
@@ -110,7 +110,7 @@ fn extract_table<'a, 'b: 'a>(html: &'b Html, table_number: usize) -> Option<Vec<
     let table_header = html.select(&table_selector).clone()
         .take(table_number)
         .nth(table_number - 1)
-        .expect(&format!("Failed to find table {table_number} in HTML"));
+        .unwrap_or_else(|| panic!("Failed to find table {table_number} in HTML"));
 
     let contents: Vec<Vec<ElementRef<'a>>> = table_header.child_elements()
         .nth(1) // Skip caption
@@ -120,31 +120,30 @@ fn extract_table<'a, 'b: 'a>(html: &'b Html, table_number: usize) -> Option<Vec<
         .filter_map(|elementref| { // Filter to remove any empty rows
             let x = elementref.child_elements()
             .collect::<Vec<ElementRef<'a>>>();
-            x.is_empty().not().then(|| x)
+            x.is_empty().not().then_some(x)
         }).collect::<Vec<_>>();
 
     // If all rows are empty return Ok(None)
-    contents.is_empty().not().then(|| contents)
+    contents.is_empty().not().then_some(contents)
 }
 
 fn extract_row<'a, 'b>(table: &'b Vec<Vec<ElementRef<'a>>>, row_number: usize) -> Option<Vec<Vec<ElementRef<'a>>>>{
     assert!(row_number >= 1);
 
-    let row: Vec<Vec<ElementRef<'a>>> = table.into_iter()
-        .nth(row_number - 1)
-        .expect(&format!("Failed to retrieve {row_number} row"))
-        .into_iter()
+    let row: Vec<Vec<ElementRef<'a>>> = table.get(row_number - 1)
+        .unwrap_or_else(|| panic!("Failed to retrieve {row_number} row"))
+        .iter()
         .map(|x| x.child_elements().collect())
         .collect();
    
-    row.is_empty().not().then(|| row)
+    row.is_empty().not().then_some(row)
 }
 
 // TODO: Using Result as return type causes E0515 error...?
 //
 // /// Returns spans from the column
 fn extract_spans_from_column<'a, 'b>(column: &'b Vec<ElementRef<'a>>) -> Result<Vec<Vec<ElementRef<'a>>>, String> {
-    let first_element = match column.into_iter().next() {
+    let first_element = match column.iter().next() {
         Some(el) => el,
         None => return Ok(vec![vec![]]) //return Err(format!("Empty column {column:?}"))
     };
@@ -182,7 +181,7 @@ fn extract_column<'a: 'b, 'b>(row: &'b Vec<Vec<ElementRef<'a>>>, column_number: 
     assert!(column_number >= 1);
 
    // TODO: messages
-    let column = row.iter().nth(column_number - 1)
+    let column = row.get(column_number - 1)
         .expect("Failed to retrieve requirements column (2)");
 
     column.to_vec()
@@ -232,7 +231,7 @@ impl LevelRequirement {
         self.get_single_level_and_recommended(strict_recommended).1
     }
     fn get_single_level_and_recommended(&self, strict_recommended: bool) -> (u32, bool) {
-        if self.level_list.len() == 0 {
+        if self.level_list.is_empty() {
             return (0, false) // Not set
         }
         if self.level_list.len() == 1 {
@@ -245,12 +244,12 @@ impl LevelRequirement {
             let mut recommended_levels: Vec<(&u32, &bool)> = l.filter(|(_, rec)|
                 **rec).collect();
             recommended_levels.sort_by(|a, b| (a.0).cmp(b.0)); // Ascending
-            let (&lvl, &rec) = recommended_levels.first().unwrap_or_else(|| &(&0, &false));//.expect("This should not be empty...");
+            let (&lvl, &rec) = recommended_levels.first().unwrap_or(&(&0, &false));//.expect("This should not be empty...");
             (lvl, rec)
         } else {
             let mut recommended_levels = self.level_list.clone();
             recommended_levels.sort(); // Ascending
-            (*recommended_levels.first().unwrap_or_else(|| &0), false) //.expect("This should not be empty..."), false)
+            (*recommended_levels.first().unwrap_or(&0), false) //.expect("This should not be empty..."), false)
         }
     }
 
@@ -279,12 +278,12 @@ impl LevelRequirement {
         let number = if number_str.contains("igh") {
             // Set a default value
             // 70, 80?
-            let high_level = 80;
-            high_level
+            
+            80
 
         } else if number_str.contains("ecent") {
-            let decent_level = 70;
-            decent_level
+            
+            70
 
         } else { match number_str.parse() {
             Ok(n) => n,
@@ -350,11 +349,11 @@ impl Display for LevelRequirement {
     }
 }
 
-fn config_has_required_levels(config_levels: &Levels, level_reqs: &Vec<LevelRequirement>, strict_recommended: bool) -> bool {
+fn config_has_required_levels(config_levels: &Levels, level_reqs: &[LevelRequirement], strict_recommended: bool) -> bool {
     level_reqs.iter().all(|skill_requirements| {
             let name = skill_requirements.get_name();
             let lvl = skill_requirements.get_level(strict_recommended);
-            config_levels.levels.get(&name).expect(&format!("Missing config level: {name} : {skill_requirements}")) >= &lvl
+            config_levels.levels.get(&name).unwrap_or_else(|| panic!("Missing config level: {name} : {skill_requirements}")) >= &lvl
     })
 }
 
@@ -362,15 +361,10 @@ fn config_has_required_levels(config_levels: &Levels, level_reqs: &Vec<LevelRequ
 fn get_requirement_from_span(span: &ElementRef) -> Option<LevelRequirement> {
     let element = span.value();
 
-    let name: Option<String> = match element.attr("data-skill") {
-        Some(name) => Some(name.to_string()),
-        None => None, // Either messed up or simply an unlock 
-                      // (e.g., resurrection spells)
-        // TODO: Log None occurences
-    };
+    let name: Option<String> = element.attr("data-skill").map(|name| name.to_string());
         //.expect(&format!("No skill name found in span: {span:?}"))
         //.to_string();
-    if name.is_none() { return None }
+    name.as_ref()?;
     let level_req_str = element.attr("data-level");
         //.expect(&format!("No skill level attribute found in span: {span:?}"));
     Some(LevelRequirement::from_span(name.unwrap(), level_req_str))
@@ -433,7 +427,7 @@ fn get_level_from_ul(ul: &Vec<Vec<ElementRef>>, strict_recommended: bool) -> Vec
 
 /// TODO: Replace row with a "Method" struct?
 fn has_required_levels_for_method(config_levels: &Levels, row: &Vec<Vec<ElementRef>> ) -> bool {
-    let level_req_spans = match extract_spans_from_column(&extract_column(&row, 3)) {
+    let level_req_spans = match extract_spans_from_column(&extract_column(row, 3)) {
        Ok(ul_spans) => ul_spans,
        Err(reason) => panic!("Error at row: {row:?}: {reason}")
     };
@@ -441,9 +435,9 @@ fn has_required_levels_for_method(config_levels: &Levels, row: &Vec<Vec<ElementR
     //let level_reqs: Vec<LevelRequirement> = level_req_spans.iter().map(get_level_from_ul).collect();
     let strict_recommended: bool = config_levels.strict_recommended;
     let level_reqs: Vec<LevelRequirement> = get_level_from_ul(&level_req_spans, strict_recommended);
-    let has_required = config_has_required_levels(&config_levels, &level_reqs, true);
+    
 
-    has_required
+    config_has_required_levels(config_levels, &level_reqs, true)
 }
 
 fn main() -> Result<(), Errors<'static>> {
@@ -459,7 +453,7 @@ fn main() -> Result<(), Errors<'static>> {
 
     //dbg!(&table);
     let rows = (1..=table.len()).map(|row_num|
-        extract_row(&table, row_num).expect(&format!("Row {row_num} is empty"))
+        extract_row(&table, row_num).unwrap_or_else(|| panic!("Row {row_num} is empty"))
     ).collect::<Vec<_>>();
     //let row = extract_row(&table, 15).expect("Row is empty");
 
@@ -470,21 +464,20 @@ fn main() -> Result<(), Errors<'static>> {
         .filter_map(|(idx, row)| 
             (
                 has_required_levels_for_method(&config_levels, row)
-            ).then(|| idx))
+            ).then_some(idx))
         .collect();
 
     //dbg!(&possible_methods_idx);
 
     let possible_methods_rows: Vec<&Vec<Vec<ElementRef>>> = possible_methods_idx
         .iter()
-        .map(|&i| rows.get(i).expect(&format!("Row missing at index {i}")))
+        .map(|&i| rows.get(i).unwrap_or_else(|| panic!("Row missing at index {i}")))
         .collect();
 
     //dbg!(&possible_methods_rows);
     let possible_methods_names: Vec<String> = possible_methods_rows
         .iter()
-        .map(|row| extract_column(&row, 1).iter()
-            .next().expect("Missing method name")
+        .map(|row| extract_column(row, 1).first().expect("Missing method name")
             .value().attr("title").expect("Missing title")
             .replace("Money making guide/", "")
         )
@@ -495,7 +488,7 @@ fn main() -> Result<(), Errors<'static>> {
     // Write results to a file
     // Overwrite file with new body data
     let path = Path::new("src\\bin\\wiki_info\\wiki_allowed_recipes.txt");
-    let mut file = match File::create(&path) {
+    let mut file = match File::create(path) {
         Err(why) => panic!("couldn't write to {}: {}", path.display(), why),
         Ok(file) => file,
     };

@@ -1,14 +1,12 @@
 use serde::de::DeserializeOwned;
-use serde::{Deserialize, Serialize};
+use serde::{Serialize};
 use tracing_subscriber::fmt::MakeWriter;
-use std::fmt;
-use std::fs::{File, Metadata, OpenOptions};
+use std::fs::{File, Metadata};
 use std::io::{self, BufReader, BufWriter, Seek, Write};
 // use std::sync::Arc;
 use std::time::Instant;
-use std::path::Path;
 
-use tracing::{debug, instrument, trace};
+use tracing::instrument;
 
 use crate::log_match_panic;
 
@@ -172,7 +170,7 @@ impl FileIO {
 
         self.rewind();
 
-        Ok(self.file.try_clone()?)
+        self.file.try_clone()
     }
 
     #[instrument(level = "trace", skip(self))]
@@ -192,7 +190,7 @@ impl FileIO {
 
     pub fn has_data(&self, f: &File) -> bool {
         self.metadata(f)
-            .and_then(|m| Ok(m.len() > 0))
+            .map(|m| m.len() > 0)
             .expect("Could not read metadata")
     }
 
@@ -229,7 +227,7 @@ impl FileIO {
 
     /// # Errors
     /// Errors when the file does not exist or deserialization fails.
-    pub fn read_serialized<'de, T: DeserializeOwned>(&mut self, ser: SerChoice) -> Result<T, std::io::Error> {
+    pub fn read_serialized<T: DeserializeOwned>(&mut self, ser: SerChoice) -> Result<T, std::io::Error> {
         let buffer = self.get_reader()?;
 
         let t = match ser {

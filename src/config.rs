@@ -111,18 +111,16 @@ impl Levels {
         let level_sum = Self::_init_calc_total_level(&self.levels);
         
         let curr_total_level: u32 = self.levels.get("total level")
-            .unwrap_or_else(|| &0).to_owned();
+            .unwrap_or(&0).to_owned();
 
         let curr_quest_points: u32 = self.levels.get("quest points")
-            .unwrap_or_else(|| &0).to_owned();
+            .unwrap_or(&0).to_owned();
         level_sum  - curr_total_level - curr_quest_points
 
     }
     fn _init_calc_total_level(levels: &HashMap<String, u32>) -> u32 {
         let level_sum: u32 = levels // Includes total_level
-            .values().map(|&x| 
-                u32::from(x)
-            ).sum::<u32>().into();
+            .values().copied().sum::<u32>();
 
         level_sum
     }
