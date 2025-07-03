@@ -115,6 +115,7 @@ pub mod custom_types {
             .filter_map(|c| {
                 // TODO: Quicker to just always do replace branch?
                 if c.contains(',') {
+                    // Parse comma strings
                     let p = c.replace(",","").parse::<i32>();
                     // dbg!(&p);
                     p.ok().map(|a| a as f32)

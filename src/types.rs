@@ -11,6 +11,7 @@ pub const ROW_HEADERS: [&str; NUM_HEADERS] = [
     "GP/H",
 ];
 
+#[allow(dead_code)]
 trait FileTable {
     /// Print the separators between tables
     fn table_separator(&self) -> String;

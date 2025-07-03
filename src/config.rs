@@ -105,6 +105,8 @@ impl Levels {
         levels.insert("total level".to_string(), total_level);
         Levels { levels , total_level, strict_recommended }
     }
+
+    #[allow(dead_code)]
     fn calc_total_level(&self) -> u32 {
         let level_sum = Self::_init_calc_total_level(&self.levels);
         

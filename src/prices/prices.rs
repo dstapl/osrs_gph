@@ -31,6 +31,7 @@ pub struct PriceHandle {
     pub pmargin: f32,
 }
 
+const SECOND_PER_TICK: f32 = 0.6;
 
 impl PriceHandle {
     pub fn new(all_items: ItemSearch, recipe_list: RecipeBook, coins: i32, pmargin: f32) -> Self {
@@ -74,7 +75,11 @@ impl PriceHandle {
                 unreachable!("INVALID RecipeTime should already be checked");
             };
 
-            let [recipe_cost_f, margin_f, time] = [overview.0 as f32, overview.2 as f32, time];
+            let [recipe_cost_f, margin_f, time] = [
+                overview.0 as f32,
+                overview.2 as f32,
+                time * SECOND_PER_TICK
+            ];
 
             let margin = floor(f64::from(margin_f));
             let recipe_cost = floor(f64::from(recipe_cost_f));
@@ -110,7 +115,7 @@ impl PriceHandle {
                     number_to_comma_sep_string(&margin),
                     number_to_comma_sep_string(&(amount*margin)),
                     total_time_h.to_string(),
-                    number_to_comma_sep_string(&gp_h)
+                    number_to_comma_sep_string(&gp_h),
                 ]
             };
 
@@ -119,9 +124,269 @@ impl PriceHandle {
             all_recipe_details.push(row);
         }
 
+        // all_recipe_details
         // TODO: Does this actually modify?
         optimal_sort(&all_recipe_details, sort_by_weights, reverse)
-        // all_recipe_details
+    }
+
+
+     pub fn recipe_lookup_from_recipe(&self, recipe: &Recipe) -> Option<Vec<Vec<String>>> {
+        // TODO: Change types to Row/Table?
+        let mut recipe_lookup: Vec<Vec<String>> = Vec::new();
+
+        // Need to parse item strings into Item objects
+        let input_items = self.parse_item_list(&recipe.inputs)?;
+        let output_items = self.parse_item_list(&recipe.outputs)?;
+
+        // HashMap[item -> (price, quantity)]
+        // Base price
+        let input_details = PriceHandle::item_list_prices_unchecked(input_items, true);
+        let output_details = PriceHandle::item_list_prices_unchecked(output_items, false);
+
+        // Base price
+        let cost = PriceHandle::total_details_price(&input_details.clone().into_values().collect::<Vec<_>>());
+        let revenue_untaxed = PriceHandle::total_details_price(
+            &output_details.clone().into_values().collect::<Vec<_>>(),
+        );
+        let revenue_taxed = PriceHandle::apply_tax(revenue_untaxed);
+
+        #[allow(clippy::cast_precision_loss, clippy::cast_possible_truncation)]
+        // Adjust prices according to price_margin
+        // Increase buy price, descrease sell price
+        // Note plus and minus symbols differ
+        let input_details_pm = input_details
+            .clone()
+            .into_iter()
+            .map(|(item, (price, quantity))| {
+                let adj_price = ((price as f32) * (1. + self.pmargin / 100.)).floor();
+                (item, (adj_price as i32, quantity))
+            })
+            .collect::<HashMap<Item, (i32, f32)>>();
+
+        #[allow(clippy::cast_precision_loss, clippy::cast_possible_truncation)]
+        let output_details_pm = output_details
+            .clone()
+            .into_iter()
+            .map(|(item, (price, quantity))| {
+                let adj_price = ((price as f32) * (1. - self.pmargin / 100.)).floor();
+                (item, (adj_price as i32, quantity))
+            })
+            .collect::<HashMap<Item, (i32, f32)>>();
+
+        let profit = revenue_taxed - cost;
+
+        // Percent margin adjusted
+        let cost_pm = PriceHandle::total_details_price(
+            &input_details_pm.clone().into_values().collect::<Vec<_>>(),
+        );
+        let revenue_untaxed_pm = PriceHandle::total_details_price(
+            &output_details_pm.clone().into_values().collect::<Vec<_>>(),
+        );
+        let revenue_taxed_pm = PriceHandle::apply_tax(revenue_untaxed_pm);
+
+        let profit_pm = revenue_taxed_pm - cost_pm;
+
+        // Calculate number of recipes that can be made
+        let number: i32 = self.coins / cost;
+        let number_pm: i32 = self.coins / cost_pm;
+
+        // Calculate total potential profit margin if all money is used
+        let total_profit: i32 = profit * number;
+        let total_profit_pm: i32 = profit_pm * number_pm;
+
+        let time = recipe.ticks.clone();
+
+        // Already have recipe time so can skip lookup
+        // First variable is time string for single recipe
+        let (_, (tt_s, gph_s), (tt_pm_s, gph_pm_s)) = match time {
+            RecipeTime::INVALID => (
+                String::new(),
+                (String::new(), String::new()),
+                (String::new(), String::new()),
+            ),
+            RecipeTime::Time(recipe_time) => {
+                let recipe_time = recipe_time * SECOND_PER_TICK;
+
+                // Regular and profit margin adjusted times & gph
+                let norm =
+                    PriceHandle::recipe_time_h(recipe_time, number, total_profit, true);
+                let pm = PriceHandle::recipe_time_h(
+                    recipe_time,
+                    number_pm,
+                    total_profit_pm,
+                    true,
+                );
+
+                (
+                    recipe_time.to_string(),
+
+                    (norm.0.to_string(), number_to_comma_sep_string(&norm.1)),
+                    (pm.0.to_string(), number_to_comma_sep_string(&pm.1)),
+                )
+            }
+        };
+
+        // Form table
+
+        // Header row
+        recipe_lookup.insert(0, vec![
+            "Item".to_owned(),
+            "Amount".to_owned(),
+            "To Buy".to_owned(),
+            "Price".to_owned(),
+            "Total Price".to_owned(),
+            "Total Time (h)".to_owned(),
+            "Profit/Recipe Time (GP/h)".to_owned()
+        ]);
+
+        recipe_lookup.push(
+            vec![
+            "Inputs (Base)".to_owned(),
+            ]
+        );
+
+        // Iterate through items and add rows
+        // item_details is in the form [item -> (price, quantity (amount for single recipe)]
+        // Can multiply by number to get (to buy) and (total price) for each item
+        #[allow(clippy::cast_precision_loss, clippy::cast_possible_truncation)]
+        for (item, (price, amount)) in input_details {
+            let to_buy: i32 = (amount * (number as f32)).floor() as i32;
+            let total_item_price = price * number;
+
+            let row: Vec<String> = vec![
+                item.name.to_owned(),
+                number_to_comma_sep_string(&(amount as i32)),
+                number_to_comma_sep_string(&to_buy),
+                number_to_comma_sep_string(&price),
+                number_to_comma_sep_string(&total_item_price)
+            ];
+
+            recipe_lookup.push(row);
+        }
+
+        recipe_lookup.push(vec![
+            "Total (Base)".to_owned(),
+            "".to_owned(), "".to_owned(),
+            number_to_comma_sep_string(&cost),
+            number_to_comma_sep_string(&(cost * number)),
+        ]);
+
+        recipe_lookup.push(Vec::new()); // Empty row
+        
+        recipe_lookup.push(vec!["Outputs (Base)".to_owned()]);
+
+        #[allow(clippy::cast_precision_loss, clippy::cast_possible_truncation)]
+        for (item, (price, amount)) in output_details {
+            let to_buy: i32 = (amount * (number as f32)).floor() as i32;
+            let total_item_price = price * number;
+
+            let row: Vec<String> = vec![
+                item.name.to_owned(),
+                number_to_comma_sep_string(&(amount as i32)),
+                number_to_comma_sep_string(&to_buy),
+                number_to_comma_sep_string(&price),
+                number_to_comma_sep_string(&total_item_price)
+            ];
+
+            recipe_lookup.push(row);
+        }
+
+        recipe_lookup.push(vec![
+            "Total (w/Tax Base)".to_owned(),
+            "".to_owned(), "".to_owned(),
+            number_to_comma_sep_string(&revenue_taxed),
+            number_to_comma_sep_string(&(revenue_taxed * number)),
+        ]);
+
+        recipe_lookup.push(Vec::new());
+
+        recipe_lookup.push(vec![
+            "Profit/Loss (w/Tax Base)".to_owned(),
+            number_to_comma_sep_string(&number),
+            "".to_owned(),
+            number_to_comma_sep_string(&profit),
+            number_to_comma_sep_string(&total_profit),
+            tt_s,
+            gph_s,
+        ]);
+
+        recipe_lookup.push(Vec::new());
+        recipe_lookup.push(Vec::new());
+
+
+
+
+        // Now repeat with percent margin values
+        recipe_lookup.push(vec![
+            // &"Inputs (2.50% margin)",
+            format!("Inputs ({}% margin)", self.pmargin),
+        ]);
+
+        #[allow(clippy::cast_precision_loss, clippy::cast_possible_truncation)]
+        for (item, (price, amount)) in input_details_pm {
+            let to_buy: i32 = (amount * (number_pm as f32)).floor() as i32;
+            let total_item_price = price * number_pm;
+
+            let row: Vec<String> = vec![
+                item.name.to_owned(),
+                number_to_comma_sep_string(&(amount as i32)),
+                number_to_comma_sep_string(&to_buy),
+                number_to_comma_sep_string(&price),
+                number_to_comma_sep_string(&total_item_price)
+            ];
+
+            recipe_lookup.push(row);
+        }
+
+        recipe_lookup.push(vec![
+            format!("Total ({}% margin)", self.pmargin),
+            "".to_owned(), "".to_owned(),
+            number_to_comma_sep_string(&cost_pm),
+            number_to_comma_sep_string(&(cost_pm * number_pm)),
+        ]);
+
+        recipe_lookup.push(Vec::new());
+
+        recipe_lookup.push(vec![
+            format!("Outputs ({}% margin)", self.pmargin),
+        ]);
+
+        #[allow(clippy::cast_precision_loss, clippy::cast_possible_truncation)]
+        for (item, (price, amount)) in output_details_pm {
+            let to_buy: i32 = (amount * (number_pm as f32)).floor() as i32;
+            let total_item_price = price * number_pm;
+
+            let row: Vec<String> = vec![
+                item.name.to_owned(),
+                number_to_comma_sep_string(&(amount as i32)),
+                number_to_comma_sep_string(&to_buy),
+                number_to_comma_sep_string(&price),
+                number_to_comma_sep_string(&total_item_price)
+            ];
+
+            recipe_lookup.push(row);
+        }
+
+        recipe_lookup.push(vec![
+            format!("Total (w/Tax {}% margin)", self.pmargin),
+            "".to_owned(), "".to_owned(),
+            number_to_comma_sep_string(&revenue_taxed_pm),
+            number_to_comma_sep_string(&(revenue_taxed_pm * number)),
+        ]);
+
+        recipe_lookup.push(Vec::new());
+
+        recipe_lookup.push(vec![
+            format!("Profit/Loss (w/Tax {}% margin)", self.pmargin),
+            number_to_comma_sep_string(&number_pm),
+            "".to_owned(),
+            number_to_comma_sep_string(&profit_pm),
+            number_to_comma_sep_string(&total_profit_pm),
+            tt_pm_s,
+            gph_pm_s,
+        ]);
+
+        Some(recipe_lookup)
     }
 
     pub fn recipe_price_overview_from_string(&self, recipe_name: &String) -> Option<Row> {
@@ -212,6 +477,7 @@ impl PriceHandle {
     // }
 
     #[allow(clippy::cast_precision_loss)]
+    /// Returns total time in hours, and estimated GP/hour
     pub fn recipe_time_h(
         time: f32,
         number: i32,
@@ -246,6 +512,7 @@ impl PriceHandle {
 
     /// # Panics
     /// When item price does not exist.
+    /// true means buy, false means sell
     pub fn item_list_prices_unchecked<I: IntoIterator<Item = (Item, f32)>>(
         item_list: I,
         price_type: bool,
@@ -260,21 +527,21 @@ impl PriceHandle {
     }
 
     pub fn parse_item_list(&self, item_list: &HashMap<String, f32>) -> Option<Vec<(Item, f32)>> {
-        // TODO: More efficient way of checking length?
-        // E.g. early exiting from the iterator instead of filter_map?
-        let filtered_items: Vec<_> = item_list
+        // TODO: Compare methods of take_while (then re-iter) vs filter_map
+        let filtered_items: Vec<Option<_>> = item_list
             .iter()
-            .filter_map(|(item_name, &quantity)|
-                // self.all_items.item_by_name(item_name) // str -> Item
-                // .map(|item| (item.clone(), quantity)) // Item -> (Item, f32)
-                {
-                    let item: Option<&Item> = self.all_items.item_by_name(item_name);
-                    item.map(|i| (i.clone(), quantity))
-                }
-            ).collect();
+            .map(|(item_name, &quantity)|
+                self.all_items.item_by_name(item_name)
+                .map(|item_option| (item_option.clone(), quantity))
+            )
+            .take_while(Option::is_some)
+            .collect();
 
         if item_list.len() == filtered_items.len() {
-            Some(filtered_items)
+            // SAFETY: Know all elements are in lookup and are type Item
+            Some(
+                filtered_items.into_iter().map(Option::unwrap).collect()
+            )
         } else {
             None
         }

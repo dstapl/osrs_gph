@@ -10,11 +10,13 @@ use std::ops::Not;
 use osrs_gph::config::{self, Config, Levels};
 
 #[derive(Debug)]
+#[allow(dead_code)]
 enum HTMLError<'a> {
     SelectorError(scraper::error::SelectorErrorKind<'a>),
 }
 
 #[derive(Debug)]
+#[allow(dead_code)]
 enum Errors<'a> {
     RequestError(reqwest::Error),
     IoError(std::io::Error),
@@ -147,8 +149,6 @@ fn extract_spans_from_column<'a, 'b>(column: &'b Vec<ElementRef<'a>>) -> Result<
         None => return Ok(vec![vec![]]) //return Err(format!("Empty column {column:?}"))
     };
 
-    let span_selector = make_selector(".scp")
-        .expect("Failed to make span selector");
     // Each <li> is in own vector
     // For rows that do NOT contain <ul> there is a single vector
     //  containing all spans
@@ -164,10 +164,6 @@ fn extract_spans_from_column<'a, 'b>(column: &'b Vec<ElementRef<'a>>) -> Result<
             first_element.select(&li_selector)
                 .map(|li| li.child_elements().collect())
                 .collect()
-
-            // first_element
-            //     .select(&span_selector)
-            //     .collect()
         },
         // Spans directly
         _ => {

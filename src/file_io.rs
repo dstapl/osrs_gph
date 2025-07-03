@@ -2,8 +2,8 @@ use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 use tracing_subscriber::fmt::MakeWriter;
 use std::fmt;
-use std::fs::{File, Metadata};
-use std::io::{self, BufReader, BufWriter, Seek};
+use std::fs::{File, Metadata, OpenOptions};
+use std::io::{self, BufReader, BufWriter, Seek, Write};
 // use std::sync::Arc;
 use std::time::Instant;
 use std::path::Path;
@@ -32,6 +32,7 @@ pub struct FileIO {
     pub options: FileOptions,
     buf_size: usize,
     file: File,
+    filename: String,
 }
 
 impl FileOptions {
@@ -97,13 +98,29 @@ impl MakeWriter<'_> for FileIO {
 
 impl FileIO {
     pub fn new(filename: String, options: FileOptions) -> Self {
-        let file = Self::_file_with_options(filename, &options);
+        let file = Self::_file_with_options(filename.clone(), &options);
 
         Self {
             options,
             buf_size: 8192usize, // Default capacity for BufRead/Writer
-            file  // Temporary file
+            file,  // Temporary file
+            filename,
         }
+    }
+
+    // TODO: Any better way to do this?
+    pub fn set_append(mut self, on: bool) -> Self {
+        drop(self.file);
+
+        self.file = std::fs::OpenOptions::new()
+            .read(self.options.read)
+            .write(self.options.write)
+            .create(self.options.create)
+            .append(on)
+            .open(self.filename.clone())
+            .expect("Failed to deserialize file contents");
+
+        self
     }
 
     // TODO(URGENT!): Rename function
@@ -115,7 +132,6 @@ impl FileIO {
             .open(filename)
             .expect("Failed to deserialize file contents")
     }
-
 
     // pub fn create_with_options(&mut self,
     pub fn with_buf_size<N: Into<usize>>(&mut self, buf_size: N) {
@@ -140,8 +156,9 @@ impl FileIO {
     }
 
     pub fn set_file_path(&mut self, fp: String) {
+        self.filename = fp;
         // Initialise new file with same options
-        self.file = Self::_file_with_options(fp, &self.options);
+        self.file = Self::_file_with_options(self.filename.clone(), &self.options);
     }
 
     /// # Errors
@@ -171,7 +188,6 @@ impl FileIO {
         log_match_panic(self.file.rewind(), 
             "Rewinding cursor...", 
             "Failed to rewind cursor.")
-        // self.file.rewind().expect("Error rewinding cursor")
     }
 
     pub fn has_data(&self, f: &File) -> bool {
@@ -205,6 +221,8 @@ impl FileIO {
         serde_yaml_ng::to_writer(buffer, data)
             .expect("Failed to write to file");
         println!("Wrote file in {:?}", now.elapsed()); // DEBUG
+        
+        self.flush()?;
 
         Ok(())
     }
@@ -230,9 +248,10 @@ impl FileIO {
     }
 
     pub fn clear_contents(&mut self) -> Result<(), std::io::Error> {
-        let file = self.open_file()?;
+        let mut file = self.open_file()?;
 
         file.set_len(0)?;
+        file.rewind()?;
         file.sync_all()?;
 
         Ok(())

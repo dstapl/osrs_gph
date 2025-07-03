@@ -1,0 +1,2 @@
+- [ ] runtime.log file not being cleared when the number of recipes is lower (table isn't as long)
+    - [ ] Check the sync_all function
