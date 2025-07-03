@@ -1,25 +1,14 @@
 /// TODO: 2025-06-16 Something weird is happening with the log...
 /// Unless the file is manually cleared, the contents will still remain
 
-use std::{collections::HashMap, fs::File};
+use std::{collections::HashMap, fs::{File, OpenOptions}, io};
 
-use osrs_gph::{api::{self, Api}, config, file_io::{FileIO, FileOptions}, helpers::Input, item_search::recipes::RecipeBook, log_match_panic, log_panic, prices::prices::PriceHandle, types::ROW_HEADERS};
+use osrs_gph::{api::{self, Api}, config, file_io::{FileIO, FileOptions}, helpers::Input, item_search::recipes::{Recipe, RecipeBook}, log_match_panic, log_panic, prices::prices::PriceHandle, types::{Row, ROW_HEADERS}};
 use tracing::{debug, error, info, instrument, span, trace, warn, Level};
 
 
 use std::io::Write;
 use itertools::Itertools; // For iterator Join
-// fn make_subscriber(filepaths: &config::FilePaths, log_level: Level) -> impl tracing::Subscriber {
-//     let log_file_options = osrs_gph::file_io::FileOptions::new(false, true, true);
-//     // Cloning because "borrowed data leaves the function"
-//     let log_file = osrs_gph::file_io::FileIO::new(filepaths.log_file.clone(), log_file_options);
-//
-//     let subscriber = tracing_subscriber::fmt()
-//         .with_writer(std::sync::Mutex::new(log_file))
-//         .finish();
-//
-//     subscriber
-// }
 
 
 fn main() {
@@ -33,7 +22,7 @@ fn main() {
 
     let _crateguard = tracing::subscriber::set_default(subscriber);
     let span = span!(LOG_LEVEL, "main");
-    let guard = span.enter();
+    let _guard = span.enter();
 
     trace!(desc = "Loaded config and created subscriber to log file.");
 
@@ -41,10 +30,6 @@ fn main() {
     let mut file = FileIO::new(conf.filepaths.price_data.clone(),
         FileOptions::new(true, true, true)
     );
-
-    // api.set_timespan(Timespan::Latest)
-    // let api: api::Api = api::Api::new(&conf.api);
-    // let res = api.get_item_prices();
 
     trace!(desc = "Taking user input...");
     let inp = String::new().input("1. API Refresh Data\n2. Load previous Data\n");
@@ -64,10 +49,7 @@ fn main() {
     };
 
 
-    // // Create item search
-    // let (mut item_search_s, ignore_items) =
-    //     create_item_search(&logger, &mut price_data_io, &id_to_name, &name_to_id, &config);
-
+    // Create item search
     let mut item_search = osrs_gph::item_search::item_search::ItemSearch::new(
        HashMap::new(), // Empty items list
        conf.filepaths.clone(),
@@ -78,15 +60,11 @@ fn main() {
     let item_prices = item_search.get_item_prices(true);
     item_search.update_item_prices(item_prices);
 
-    // dbg!(&item_search.items);
     // Get ignored items from the config
     let ignore_items: Vec<String> = conf.profit.ignore_items.clone();
     
     // Remove items contained in ignore_items
     item_search.ignore_items(&ignore_items);
-
-
-    // dbg!(&item_search.items);
 
     // Load in recipes
     let mut recipe_list = RecipeBook::new(HashMap::new());
@@ -119,26 +97,56 @@ fn main() {
     file.set_file_path(conf.filepaths.results.optimal.clone());
 
 
+    let _ = log_match_panic(
+        file.clear_contents(),
+        "Cleared file contents",
+        "Failed to clear file contents"
+    );
+
     trace!(desc = "Writing overview to file");
     // TODO: Use traits from types.rs
-    write_markdown(&mut file, optimal_overview);
-    // //
-    // // optimal_overview.set_format(*FORMAT_MARKDOWN);
-    // optimal_overview.set_titles(
-    //     Row::new(
-    //         vec![
-    //         Cell::new_align("Method", LEFT_ALIGN),
-    //         Cell::new_align("Loss/Gain", RIGHT_ALIGN),
-    //         Cell::new_align("Total Loss/Gain", RIGHT_ALIGN),
-    //         Cell::new_align("Time (h)", RIGHT_ALIGN),
-    //         Cell::new_align("GP/h", RIGHT_ALIGN)
-    //         ]
-    //     )
-    // );
-    //
-    // (logger, results_fps.clone(), optimal_overview)
-    //
+    let _ = log_match_panic(
+        write_markdown(&mut file, optimal_overview),
+        "Wrote table to optimal_overview",
+        "Failed to write table to optimal_overview"
+    );
 
+    trace!(desc = "Creating recipe lookups");
+    // let recipe_lookups = price_handle.recipe_lookups();
+    // let recipe_lookups = todo!("Implement recipe lookups");
+
+    let recipe_lookup_list: Vec<_> = conf.display.lookup.specific.clone()
+        .into_iter()
+        .filter_map(|recipe_s| {
+            let x = price_handle.recipe_list.get_recipe(&recipe_s)?;
+            let specific_lookup = price_handle.recipe_lookup_from_recipe(x)?;
+            Some((recipe_s, specific_lookup))
+        })
+    .collect();
+
+    trace!(desc = "Changing file path to recipe lookup results file");
+    // Write out to file
+    file.set_file_path(conf.filepaths.results.lookup.clone());
+
+    // Clear file contents then append since loop
+    let _ = log_match_panic(
+        file.clear_contents(),
+        "Cleared file contents",
+        "Failed to clear file contents"
+    );
+
+    file = file.set_append(true);
+
+    trace!(desc = "Writing detailed recipe lookups to file");
+    for (recipe_name, recipe_lookup) in recipe_lookup_list {
+        // TODO: Error message
+        let _ = log_match_panic(
+            write_recipe_lookup(&mut file, &recipe_name, recipe_lookup),
+            &format!("Wrote recipe lookup for {recipe_name}"),
+            &format!("Failed to write recipe lookup for {recipe_name}"),
+        );
+
+    }
 }
 
 fn request_new_prices_from_api(api_settings: &config::Api, file: &mut FileIO) {
@@ -160,21 +168,187 @@ fn request_new_prices_from_api(api_settings: &config::Api, file: &mut FileIO) {
 
 // TODO: Takes in a nested iterator
 #[instrument(level = "trace", skip(file, data))]
-fn write_markdown(file: &mut FileIO, data: osrs_gph::prices::prices::Table) {
-    // Write header
-    let mut file: File = file.open_file().expect("Failed to access inner file");
-    writeln!(file, "| {} |", ROW_HEADERS.join(" | "));
+// fn write_markdown(file: &mut FileIO, data: osrs_gph::prices::prices::Table) -> io::Result<()> {
+//     // Write header
+//     let mut file: File = file.open_file().expect("Failed to access inner file");
+//     writeln!(&mut file, "| {} |", ROW_HEADERS.join(" | "))?;
+//
+//     // Write separator
+//     let header_sep_line = ROW_HEADERS.iter()
+//         .map(|_| "---")
+//         .collect::<Vec<_>>()
+//         .join("|");
+//
+//     writeln!(&mut file, "|{}|", header_sep_line)?;
+//
+//     // Write rows
+//     for row in data.into_iter() {
+//         writeln!(&mut file, "|{}|", row.into_iter().join(" | "))?;
+//     }
+//
+//     Ok(())
+// }
+fn write_markdown(file: &mut FileIO, data: osrs_gph::prices::prices::Table) -> io::Result<()> {
+    // Open the underlying file handle
+    let mut file = file.open_file().expect("Failed to access inner file");
 
-    // Write separator
-    let header_sep_line = ROW_HEADERS.iter()
-        .map(|_| "---")
-        .collect::<Vec<_>>()
-        .join("|");
+    let num_cols = ROW_HEADERS.len();
 
-    writeln!(file, "|{}|", header_sep_line);
+    // Collect headers and rows into one iterable to calculate widths
+    let mut col_widths = vec![0; num_cols];
 
-    // Write rows
-    for row in data.into_iter() {
-        writeln!(file, "|{}|", row.into_iter().join(" | "));
+    // Check headers lengths
+    for (i, header) in ROW_HEADERS.iter().enumerate() {
+        col_widths[i] = col_widths[i].max(header.len());
+    }
+
+    // Check all data rows lengths
+    for row in &data {
+        for (i, cell) in row.iter().enumerate() {
+            col_widths[i] = col_widths[i].max(cell.len());
+        }
+    }
+
+    // Format a row with custom alignment rules
+    fn format_row(row: &[String], col_widths: &[usize]) -> String {
+        let num_cols = col_widths.len();
+
+        let cells = row.iter().enumerate().map(|(i, cell)| {
+            let width = col_widths[i];
+            if i == 0 {
+                // Left align first two columns
+                format!("{:<width$}", cell, width = width)
+            } else if i >= num_cols - 2 {
+                // Center align last two columns
+                center_align(cell, width)
+            } else {
+                // Right align others
+                format!("{:>width$}", cell, width = width)
+            }
+        });
+
+        format!("| {} |", cells.collect::<Vec<_>>().join(" | "))
+    }
+
+    // Write header row
+    let header_row: Vec<String> = ROW_HEADERS.iter().map(|&s| s.to_string()).collect();
+    writeln!(file, "{}", format_row(&header_row, &col_widths))?;
+
+    // Write separator row
+    let separator_cells = col_widths.iter().map(|w| "-".repeat(*w.max(&3)));
+    writeln!(file, "| {} |", separator_cells.collect::<Vec<_>>().join(" | "))?;
+
+    // Write data rows
+    for row in data.iter() {
+        writeln!(file, "{}", format_row(row, &col_widths))?;
+    }
+
+    Ok(())
+}
+
+
+fn write_recipe_lookup(
+    writer: &mut FileIO,
+    recipe_name: &str,
+    recipe_lookup: Vec<Vec<String>>,
+) -> io::Result<()> {
+    // Title
+    writeln!(writer, "{recipe_name}\r\n")?;
+
+    // Table
+    let (rlstr, max_line_length) = markdown_table(recipe_lookup);
+
+    write!(writer, "{rlstr}")?; // Already has newline
+    
+    // Buffer line
+    write!(writer, "\r\n{}\r\n\r\n", "#".repeat(max_line_length))?;
+
+    Ok(())
+}
+
+
+// Returns table as a string, and maximum line length
+fn markdown_table(rows: Vec<Vec<String>>) -> (String, usize) {
+    if rows.is_empty() {
+        return (String::new(), 0);
+    }
+
+    let num_cols = rows.iter().map(|row| row.len()).max().unwrap_or(0);
+
+    let padded_rows: Vec<Vec<String>> = rows
+        .into_iter()
+        .map(|mut row| {
+            row.resize(num_cols, "".to_string());
+            row
+        })
+        .collect();
+
+    let mut col_widths = vec![0; num_cols];
+    for row in &padded_rows {
+        for (i, cell) in row.iter().enumerate() {
+            col_widths[i] = col_widths[i].max(cell.len());
+        }
+    }
+
+    let mut output = String::new();
+    let mut max_len = 0;
+
+    for (i, row) in padded_rows.iter().enumerate() {
+        let line = row
+            .iter()
+            .enumerate()
+            .map(|(col_idx, cell)| {
+                let width = col_widths[col_idx];
+                if col_idx < 2 { 
+                    // Left align first two cols
+                    format!("{:<width$}", cell, width = width)
+                } else if col_idx >= num_cols - 2 {
+                    // Center align last two cols
+                    center_align(cell, width)
+                } else {
+                    // Right align others
+                    format!("{:>width$}", cell, width = width)
+                }
+            })
+            .collect::<Vec<_>>()
+            .join(" | ");
+
+        // Update max line length
+        let full_line = format!("| {} |", line);
+        max_len = max_len.max(full_line.len());
+
+        output.push_str(&full_line);
+        output.push('\n');
+
+        if i == 0 {
+            let separator = col_widths
+                .iter()
+                .map(|w| "-".repeat(*w.max(&3)))
+                .collect::<Vec<_>>()
+                .join(" | ");
+            let sep_line = format!("| {} |", separator);
+            max_len = max_len.max(sep_line.len());
+            output.push_str(&sep_line);
+            output.push('\n');
+        }
+    }
+
+    (output, max_len)
+}
+
+
+fn center_align(s: &str, width: usize) -> String {
+    if width <= s.len() {
+        s.to_string()
+    } else {
+        let total_padding = width - s.len();
+        let left_pad = total_padding / 2;
+        let right_pad = total_padding - left_pad;
+        format!(
+            "{}{}{}",
+            " ".repeat(left_pad),
+            s,
+            " ".repeat(right_pad)
+        )
     }
 }

@@ -329,3 +329,28 @@ Gargoyles (Off-task):
     Runite ore: 2.34
     Coins: 95859
   time: 0
+# Adjust time to include smithing
+Smelting Steel Bars:
+  name: "Smelting Steel Bars"
+  inputs:
+    Iron ore: 9
+    Coal: 18
+  outputs:
+    Steel bar: 9
+  time: 36
+Smelting Adamantite Bars:
+  name: "Smelting Adamantite Bars"
+  inputs:
+    Adamantite ore: 4
+    Coal: 24
+  outputs:
+    Adamantite bar: 4
+  time: 16
+Smelting Mithril Bars:
+  name: "Smelting Mithril Bars"
+  inputs:
+    Mithril ore: 5
+    Coal: 20
+  outputs:
+    Mithril bar: 5
+  time: 20

@@ -45,6 +45,8 @@ pub fn make_subscriber(filepath: String, log_level: Level) -> impl tracing::Subs
         file_io::FileOptions::new(false, true, true)
     );
 
+    // Clear file now the subscriber is initialised
+    log_file.clear_contents().expect("Failed to clear log file contents");
 
     let subscriber = tracing_subscriber::registry()
         .with(
@@ -54,7 +56,7 @@ pub fn make_subscriber(filepath: String, log_level: Level) -> impl tracing::Subs
                 Mutex::new(
                     // TODO(Bug): When using custom FileIO some logs
                     //  are truncated. May be due to using BufWriter?
-                    // log_file
+                    //  Since logs are not in order, the buffer gets flushed
                     log_file.open_file().expect("Failed to open logging file")
                 )
             )
@@ -63,5 +65,6 @@ pub fn make_subscriber(filepath: String, log_level: Level) -> impl tracing::Subs
             )
         )
         ;
+
     subscriber
 }

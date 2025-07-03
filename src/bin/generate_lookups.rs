@@ -15,7 +15,7 @@ fn main() {
     let subscriber = osrs_gph::make_subscriber(config.filepaths.bin_log_file.clone(), LOG_LEVEL);
 
     let _crateguard = tracing::subscriber::set_default(subscriber);
-    let span = span!(LOG_LEVEL, "main").entered();
+    let _span = span!(LOG_LEVEL, "main").entered();
 
     trace!("Initialised logger: {config_file_name}");
 
