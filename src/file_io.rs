@@ -1,8 +1,8 @@
 use serde::de::DeserializeOwned;
-use serde::{Serialize};
-use tracing_subscriber::fmt::MakeWriter;
+use serde::Serialize;
 use std::fs::{File, Metadata};
 use std::io::{self, BufReader, BufWriter, Seek, Write};
+use tracing_subscriber::fmt::MakeWriter;
 // use std::sync::Arc;
 use std::time::Instant;
 
@@ -10,12 +10,11 @@ use tracing::instrument;
 
 use crate::log_match_panic;
 
-#[derive(Debug)]
+#[derive(Clone, Copy, Debug)]
 pub enum SerChoice {
     JSON,
-    YAML
+    YAML,
 }
-
 
 #[derive(Debug)]
 pub struct FileOptions {
@@ -35,10 +34,13 @@ pub struct FileIO {
 
 impl FileOptions {
     pub fn new(read: bool, write: bool, create: bool) -> Self {
-        FileOptions { read, write, create }
+        FileOptions {
+            read,
+            write,
+            create,
+        }
     }
 }
-
 
 // TODO: Should all be synced?
 impl std::io::Write for FileIO {
@@ -55,8 +57,9 @@ impl std::io::Write for FileIO {
     }
 
     fn by_ref(&mut self) -> &mut Self
-        where
-            Self: Sized, {
+    where
+        Self: Sized,
+    {
         self
     }
 
@@ -72,7 +75,7 @@ impl std::io::Write for FileIO {
         let mut writer = self.get_writer()?;
         let bytes = writer.write_fmt(args);
         writer.flush()?;
-        
+
         bytes
     }
 
@@ -88,9 +91,9 @@ impl std::io::Write for FileIO {
 impl MakeWriter<'_> for FileIO {
     type Writer = File;
     fn make_writer(&'_ self) -> Self::Writer {
-        self.file.try_clone().expect(
-            "Failed to access internal file from FileIO struct"
-        )
+        self.file
+            .try_clone()
+            .expect("Failed to access internal file from FileIO struct")
     }
 }
 
@@ -101,12 +104,16 @@ impl FileIO {
         Self {
             options,
             buf_size: 8192usize, // Default capacity for BufRead/Writer
-            file,  // Temporary file
+            file,                // Temporary file
             filename,
         }
     }
 
     // TODO: Any better way to do this?
+    /// # Panics
+    ///
+    /// Will panic if the file fails to be opened. Might not exist.
+    #[must_use]
     pub fn set_append(mut self, on: bool) -> Self {
         drop(self.file);
 
@@ -122,6 +129,8 @@ impl FileIO {
     }
 
     // TODO(URGENT!): Rename function
+    /// # Panics
+    /// Will panic if the file fails to be opened. Might not exist.
     pub fn _file_with_options(filename: String, options: &FileOptions) -> File {
         std::fs::OpenOptions::new()
             .read(options.read)
@@ -131,7 +140,6 @@ impl FileIO {
             .expect("Failed to deserialize file contents")
     }
 
-    // pub fn create_with_options(&mut self,
     pub fn with_buf_size<N: Into<usize>>(&mut self, buf_size: N) {
         self.buf_size = buf_size.into();
     }
@@ -166,7 +174,7 @@ impl FileIO {
 
         if !&self.exists(&self.file) {
             return Err(io::ErrorKind::NotFound.into());
-        };
+        }
 
         self.rewind();
 
@@ -174,32 +182,44 @@ impl FileIO {
     }
 
     #[instrument(level = "trace", skip(self))]
-    fn rewind(&mut self) { //, file: &mut File) {
+    fn rewind(&mut self) {
+        //, file: &mut File) {
         // Need to rewind cursor just in case this isn't first operation
-        let curr_pos = self.file.stream_position().expect("Error seeking file cursor");
+        let curr_pos = self
+            .file
+            .stream_position()
+            .expect("Error seeking file cursor");
 
         if curr_pos == 0 {
             return; // Early exit. Don't rewind if not needed.
         }
 
         // TODO: Change to a *trace* log
-        log_match_panic(self.file.rewind(), 
-            "Rewinding cursor...", 
-            "Failed to rewind cursor.")
+        log_match_panic(
+            self.file.rewind(),
+            "Rewinding cursor...",
+            "Failed to rewind cursor.",
+        )
     }
 
+    /// # Panics
+    /// Will panic if can not read file metadata
     pub fn has_data(&self, f: &File) -> bool {
         self.metadata(f)
             .map(|m| m.len() > 0)
             .expect("Could not read metadata")
     }
 
+    /// # Errors
+    /// Refer to [`FileIO::open_file`]
     pub fn get_writer(&mut self) -> Result<BufWriter<File>, std::io::Error> {
         let file = self.open_file()?;
 
         Ok(BufWriter::with_capacity(self.get_buf_size(), file))
     }
 
+    /// # Errors
+    /// Refer to [`FileIO::open_file`]
     pub fn get_reader(&mut self) -> Result<BufReader<File>, std::io::Error> {
         let file = self.open_file()?;
 
@@ -208,43 +228,50 @@ impl FileIO {
     }
 
     /// # Errors
-    /// When file does not exist or serialization fails.
-    pub fn write_serialized<J: Serialize>(
-        &mut self,
-        data: &J,
-    ) -> Result<(), std::io::Error> {
+    /// Refer to [`FileIO::open_file`]
+    ///
+    /// # Panics
+    /// When data serialization or file i/o fails
+    pub fn write_serialized<J: Serialize>(&mut self, data: &J) -> Result<(), std::io::Error> {
         let buffer = self.get_writer()?;
 
         let now = Instant::now(); // DEBUG
-        serde_yaml_ng::to_writer(buffer, data)
-            .expect("Failed to write to file");
+        serde_yaml_ng::to_writer(buffer, data).expect("Failed to write to file");
         println!("Wrote file in {:?}", now.elapsed()); // DEBUG
-        
+
         self.flush()?;
 
         Ok(())
     }
 
     /// # Errors
-    /// Errors when the file does not exist or deserialization fails.
-    pub fn read_serialized<T: DeserializeOwned>(&mut self, ser: SerChoice) -> Result<T, std::io::Error> {
+    /// Refer to [`FileIO::open_file`]
+    ///
+    /// # Panics
+    /// When data deserialization or file i/o fails
+    pub fn read_serialized<T: DeserializeOwned>(
+        &mut self,
+        ser: SerChoice,
+    ) -> Result<T, std::io::Error> {
         let buffer = self.get_reader()?;
 
         let t = match ser {
             SerChoice::JSON => {
                 let mut deserialiser = serde_json::de::Deserializer::from_reader(buffer);
                 T::deserialize(&mut deserialiser).expect("Failed to read from file")
-            },
+            }
             SerChoice::YAML => {
                 let data_result = serde_yaml_ng::from_reader(buffer);
                 data_result.expect("Failed to read from file")
             }
         };
 
-
         Ok(t)
     }
 
+    /// # Errors
+    /// Refer to [`FileIO::open_file`]
+    /// [`File::set_len`] and [`File::sync_all`]
     pub fn clear_contents(&mut self) -> Result<(), std::io::Error> {
         let mut file = self.open_file()?;
 

@@ -3,13 +3,10 @@ use std::{
     io::{prelude::BufRead, Write},
 };
 
-
 #[allow(clippy::cast_possible_truncation)]
 pub fn floor(x: f64) -> i32 {
-   x.floor() as i32 
+    x.floor() as i32
 }
-
-
 
 /// Digits after decimal point
 /// # Panics
@@ -32,7 +29,6 @@ pub fn number_to_comma_sep_string<T: num_format::ToFormattedStr>(x: &T) -> Strin
     // Get a view into the buffer as a &str...
     buf.to_string()
 }
-
 
 pub trait Input {
     /// User input convenience function

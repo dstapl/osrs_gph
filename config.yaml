@@ -21,12 +21,12 @@ filepaths:
     lookup: results/recipe_lookup.md
 
   main_log_file: runtime.log
-  # TODO: Currently this is shared across all bin files
+  # TODO: Currently this is shared across all bin/* in the project
   bin_log_file: src/bin/generators.log
 
 profit:
   # Underscores are removed from strings
-  coins: 682_216
+  coins: 876_000
   percent_margin: 2.5
   weights:
     margin: 1.e-2
@@ -57,6 +57,9 @@ display:
   must_profit: true
   show_hidden: false
   reverse: true
+  # Only show results from: f2p, p2p, both
+  membership: f2p
+  
 
 levels:
   # Put all player character levels here

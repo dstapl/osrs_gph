@@ -56,7 +56,7 @@ pub struct FilePaths {
     pub bin_log_file: String,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Clone, Copy, Debug)]
 pub struct Weights {
     pub margin: f32,
     pub time: f32,
@@ -79,12 +79,23 @@ pub struct LookupOptions {
 }
 
 #[derive(Deserialize, Debug)]
+pub enum Membership {
+    #[serde(rename = "f2p")]
+    F2P,
+    #[serde(rename = "p2p")]
+    P2P,
+    #[serde(rename = "both")]
+    BOTH,
+}
+
+#[derive(Deserialize, Debug)]
 pub struct Display {
     pub number: u32,
     pub lookup: LookupOptions,
     pub must_profit: bool,
     pub show_hidden: bool,
     pub reverse: bool,
+    pub membership: Membership,
 }
 
 #[derive(Debug)]
@@ -93,8 +104,7 @@ pub struct Levels {
     pub total_level: u32,
     // If a skill is marked as recommended
     //      should this level limit be encforced?
-    pub strict_recommended: bool, 
-
+    pub strict_recommended: bool,
 }
 
 impl Levels {
@@ -103,24 +113,27 @@ impl Levels {
         let total_level = Self::_init_calc_total_level(&levels);
 
         levels.insert("total level".to_string(), total_level);
-        Levels { levels , total_level, strict_recommended }
+        Levels {
+            levels,
+            total_level,
+            strict_recommended,
+        }
     }
 
     #[allow(dead_code)]
     fn calc_total_level(&self) -> u32 {
         let level_sum = Self::_init_calc_total_level(&self.levels);
-        
-        let curr_total_level: u32 = self.levels.get("total level")
-            .unwrap_or(&0).to_owned();
 
-        let curr_quest_points: u32 = self.levels.get("quest points")
-            .unwrap_or(&0).to_owned();
-        level_sum  - curr_total_level - curr_quest_points
+        let curr_total_level: u32 = self.levels.get("total level").unwrap_or(&0).to_owned();
 
+        let curr_quest_points: u32 = self.levels.get("quest points").unwrap_or(&0).to_owned();
+        level_sum - curr_total_level - curr_quest_points
     }
     fn _init_calc_total_level(levels: &HashMap<String, u32>) -> u32 {
         let level_sum: u32 = levels // Includes total_level
-            .values().copied().sum::<u32>();
+            .values()
+            .copied()
+            .sum::<u32>();
 
         level_sum
     }
@@ -132,11 +145,10 @@ impl Default for Api {
         Self {
             url: "https://prices.runescape.wiki/api/v1/osrs".to_string(),
             timespan: TimeSpan::default(),
-            auth_headers: HashMap::<String, String>::from_iter(
-                auth_headers
-                    .into_iter()
-                    .map(|(k, v)| (k.to_string(), v.to_string())),
-            ),
+            auth_headers: auth_headers
+                .into_iter()
+                .map(|(k, v)| (k.to_string(), v.to_string()))
+                .collect(),
         }
     }
 }
@@ -201,6 +213,11 @@ impl Default for LookupOptions {
         }
     }
 }
+impl Default for Membership {
+    fn default() -> Self {
+        Self::BOTH
+    }
+}
 impl Default for Display {
     fn default() -> Self {
         Self {
@@ -209,6 +226,7 @@ impl Default for Display {
             must_profit: true,
             show_hidden: false,
             reverse: true,
+            membership: Membership::default(),
         }
     }
 }
@@ -263,6 +281,9 @@ impl From<serde_yaml_ng::Error> for ConfigError {
     }
 }
 
+/// # Panics
+/// Will panic if can not open file.
+/// Or if fails to deserialise file contents.
 pub fn load_config<P: AsRef<std::path::Path>>(filepath: P) -> Config {
     File::open(&filepath)
         .map_err(ConfigError::FileError)
@@ -286,7 +307,6 @@ where
     })
 }
 
-
 use serde::{de::Visitor, Deserializer};
 use std::fmt;
 impl<'de> Deserialize<'de> for Levels {
@@ -302,7 +322,8 @@ impl<'de> Deserialize<'de> for Levels {
 
             fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
                 // formatter.write_str("four fields containting values/nones: i32,u32,i32,u32.")
-                formatter.write_str("23 fields of u32 corresponding to the level in each OSRS skill.")
+                formatter
+                    .write_str("23 fields of u32 corresponding to the level in each OSRS skill.")
             }
 
             fn visit_map<A>(self, mut map: A) -> Result<Self::Value, A::Error>
@@ -312,16 +333,19 @@ impl<'de> Deserialize<'de> for Levels {
                 // TODO: Is there a way to write this using different visitors?
 
                 // First value will be `option: strict_recommended: bool`
-                let (_, options_map) = map.next_entry::<String, HashMap<String,bool>>()?
+                let (_, options_map) = map
+                    .next_entry::<String, HashMap<String, bool>>()?
                     .expect("Failed to deserialize Levels.options");
-                let strict_recommended: bool = *options_map.get("strict_recommended")
+                let strict_recommended: bool = *options_map
+                    .get("strict_recommended")
                     .expect("Failed to find strict_recommended in config file");
 
-
-                let (_, skill_map) = map.next_entry::<String, HashMap<String, u32>>()?
+                let (_, skill_map) = map
+                    .next_entry::<String, HashMap<String, u32>>()?
                     .expect("Failed to deserialize levels in config file");
 
-                let levels = skill_map.into_iter()
+                let levels = skill_map
+                    .into_iter()
                     .map(|(key, value)| (key.to_lowercase(), value))
                     .collect::<HashMap<String, u32>>();
 

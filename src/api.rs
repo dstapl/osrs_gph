@@ -1,13 +1,14 @@
-use std::{collections::HashMap, io::{BufReader, Read}};
+use std::{
+    collections::HashMap,
+    io::{BufReader, Read},
+};
 
 use reqwest::{blocking, header::HeaderMap};
 use serde::Deserialize;
 
-use crate::{item_search::data_types, log_match_panic, log_panic
-};
+use crate::{item_search::data_types, log_match_panic, log_panic};
 
 use tracing::{instrument, trace, warn};
-
 
 #[derive(Debug, Deserialize)]
 pub struct MappingItem {
@@ -23,15 +24,14 @@ pub struct MappingItem {
     pub lowalch: i32,
 }
 
-
 #[derive(Debug, Clone, Copy)]
 // [Latest](Timespan::Latest) will return the latest high and low prices
 // [Oldest](Timespan::Oldest) will provide an average of the prices for:
 //  `5` minutes
 //  `1` hour
-pub enum Timespan{
+pub enum Timespan {
     Latest,
-    Oldest(u16), // 5(minutes), 1(hour) 
+    Oldest(u16), // 5(minutes), 1(hour)
                  // TODO: Implement *SPECIFIC ITEM* timeseries? Not really needed...
                  // Maybe only if the item can't be found in the current timespan?
                  // -> Increase the lookback time
@@ -50,10 +50,9 @@ pub struct ApiHeaders {
     pub headers: HashMap<String, String>,
 }
 
-
 impl From<crate::config::TimeSpan> for Timespan {
     fn from(span: crate::config::TimeSpan) -> Self {
-        match span{
+        match span {
             crate::config::TimeSpan::Latest => Self::Latest,
             crate::config::TimeSpan::FiveMinute => Self::Oldest(5),
             crate::config::TimeSpan::OneHour => Self::Oldest(1),
@@ -63,35 +62,38 @@ impl From<crate::config::TimeSpan> for Timespan {
 
 impl Timespan {
     // TODO: Include `/` in endpoint String?
-    fn get_endpoint(&self) -> String {
+    fn get_endpoint(self) -> String {
         match self {
             Self::Latest => "/latest",
-            Self::Oldest(t) => { match t {
+            Self::Oldest(t) => match t {
                 5 => "/5m",
                 1 => "/1h",
                 unknown => log_panic("Unimplemented timespan", unknown),
-            }}
-        }.to_string()
+            },
+        }
+        .to_string()
     }
 }
 
-impl<S: Into<String>> From<HashMap<S,S>> for ApiHeaders {
-    fn from(value: HashMap<S,S>) -> Self {
-        let headers: HashMap<String, String> = value.into_iter()
-            .map(|(x,y)| (x.into(), y.into()))
+impl<S: Into<String>> From<HashMap<S, S>> for ApiHeaders {
+    fn from(value: HashMap<S, S>) -> Self {
+        let headers: HashMap<String, String> = value
+            .into_iter()
+            .map(|(x, y)| (x.into(), y.into()))
             .collect();
-        ApiHeaders { headers } 
+        ApiHeaders { headers }
     }
 }
 
-impl<K, V> Extend<(K, V)> for ApiHeaders where
-K: Into<String>,
-V: Into<String> {
+impl<K, V> Extend<(K, V)> for ApiHeaders
+where
+    K: Into<String>,
+    V: Into<String>,
+{
     #[inline]
     fn extend<T: IntoIterator<Item = (K, V)>>(&mut self, iter: T) {
-        self.headers.extend(
-            iter.into_iter().map(|(k,v)| (k.into(), v.into()))
-        )
+        self.headers
+            .extend(iter.into_iter().map(|(k, v)| (k.into(), v.into())));
     }
 }
 
@@ -116,7 +118,7 @@ impl Api {
 
     /// Updates existing API [headers](Api::headers) with provided `headers`
     #[instrument(level = "trace", skip(self, headers))]
-    pub fn add_headers<S: Into<String>>(&mut self, headers: HashMap<S,S>) {
+    pub fn add_headers<S: Into<String>>(&mut self, headers: HashMap<S, S>) {
         trace!(desc = "Extending headers");
         trace!(old = ?self.headers);
 
@@ -143,20 +145,21 @@ impl Api {
         // TODO: Optimise by storing headers as HeaderMap in API struct?
         let header_map: HeaderMap = log_match_panic(
             HeaderMap::try_from(&self.headers.headers),
-            "Made HeaderMap", "HeaderMap conversion error");
+            "Made HeaderMap",
+            "HeaderMap conversion error",
+        );
 
         let endpoint: String = self.timespan.get_endpoint();
-        let target: String = self.url.to_owned() + &endpoint;
+        let target: String = self.url.clone() + &endpoint;
 
         let client = blocking::Client::new();
         let res_build = client.get(target).headers(header_map);
 
-        let mut res = log_match_panic(res_build.send(), "Recieved response",
-        "Request sent error");
+        let mut res = log_match_panic(res_build.send(), "Recieved response", "Request sent error");
 
         // Decode response
         let buffer = BufReader::new(res.by_ref());
-        
+
         log_match_panic(
             serde_yaml_ng::from_reader(buffer),
             "Deserializing API response",
@@ -165,7 +168,10 @@ impl Api {
     }
 
     /// Wrapper around [`self.request_item_prices`]
-    pub fn request_timespan_prices(&mut self, timespan: Timespan) -> data_types::latest::PriceDataType {
+    pub fn request_timespan_prices(
+        &mut self,
+        timespan: Timespan,
+    ) -> data_types::latest::PriceDataType {
         let old_timespan = self.timespan;
 
         self.timespan = timespan;

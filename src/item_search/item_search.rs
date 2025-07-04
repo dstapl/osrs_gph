@@ -1,17 +1,15 @@
 //! Parsing items from [api](src/api.rs) data
 //! TODO: Support for different modules (timespans) other than just latest
-use super::data_types::latest::{self, PriceDataType};//::PriceDatum;
- 
+use super::data_types::latest::{self, PriceDataType}; //::PriceDatum;
 
 use tracing::{debug, instrument, warn};
 
 use serde::Deserialize;
 use std::{collections::HashMap, fmt::Debug, hash::Hash};
 
-
-use crate::file_io::{FileIO, FileOptions};
-use crate::{file_io, log_panic, log_match_panic};
 use crate::config::FilePaths;
+use crate::file_io::{FileIO, FileOptions};
+use crate::{file_io, log_match_panic, log_panic};
 
 #[derive(Debug, Deserialize, Clone)]
 pub struct Item {
@@ -34,7 +32,6 @@ impl Hash for Item {
     }
 }
 
-
 impl Item {
     pub fn new(name: String, id: String, price_data: latest::PriceDatum) -> Self {
         Self {
@@ -43,7 +40,7 @@ impl Item {
             item_prices: price_data,
         }
     }
-    
+
     pub fn invalid_data(&self) -> bool {
         self.item_prices.invalid_data()
     }
@@ -64,14 +61,11 @@ impl Item {
     }
 }
 
-
-
-pub struct ItemSearch{
+pub struct ItemSearch {
     // NOTE: **Handlers replaced by filenames**
     // pub price_data_fio: FileIO,
     // pub name_to_id_fio: FileIO,
     // pub id_to_name_fio: FileIO,
-
     pub items: HashMap<String, Item>,
     pub filepaths: FilePaths,
     // TODO: Better way to do api_config?
@@ -81,8 +75,6 @@ pub struct ItemSearch{
     pub name_to_id: HashMap<String, String>,
     pub id_to_name: HashMap<String, String>,
 }
-
-
 
 impl ItemSearch {
     pub fn new(
@@ -108,21 +100,20 @@ impl ItemSearch {
         // Create fileio
         let mut file = FileIO::new(
             self.filepaths.lookup_data.id_to_name.clone(),
-            FileOptions::new(true, true, false) // Don't want to make new files
+            FileOptions::new(true, true, false), // Don't want to make new files
         );
 
         self.id_to_name = log_match_panic(
             file.read_serialized(file_io::SerChoice::YAML),
             "Reading id_to_name lookup data",
-            "Failed to Deserialize id_to_name"
+            "Failed to Deserialize id_to_name",
         );
-
 
         file.set_file_path(self.filepaths.lookup_data.name_to_id.clone());
         self.name_to_id = log_match_panic(
             file.read_serialized(file_io::SerChoice::YAML),
             "Reading name_to_id lookup data",
-            "Failed to Deserialize name_to_id"
+            "Failed to Deserialize name_to_id",
         );
     }
 
@@ -135,8 +126,8 @@ impl ItemSearch {
     }
 
     pub fn item_by_name(&self, item_name: &String) -> Option<&Item> {
-        self.items.get(item_name) 
-    }  
+        self.items.get(item_name)
+    }
 
     pub fn item_by_id(&self, item_id: &String) -> Option<&Item> {
         if let Some(item_name) = self.name_from_id(item_id) {
@@ -147,11 +138,14 @@ impl ItemSearch {
     }
 
     /// Either from file (ideally) or from the api
+    /// # Panics
+    /// Will panic when the api response is empty
     pub fn get_item_prices(&mut self, from_file: bool) -> PriceDataType {
         let res = if from_file {
-            log_match_panic(self.find_prices_from_file(),
+            log_match_panic(
+                self.find_prices_from_file(),
                 "Attempting to find prices from a stored mapping file.",
-                "Failed to find prices from file. May not exist or malformed data."
+                "Failed to find prices from file. May not exist or malformed data.",
             )
         } else {
             let api = crate::api::Api::new(&self.api_config);
@@ -163,19 +157,17 @@ impl ItemSearch {
         res
     }
 
-
     /// Attempts to load item prices
     /// from a file defined in config
-    fn find_prices_from_file(&mut self) -> Result<PriceDataType, std::io::Error>{
+    fn find_prices_from_file(&mut self) -> Result<PriceDataType, std::io::Error> {
         // Get correct file name and try to load contents
         let mut price_io = crate::file_io::FileIO::new(
-           self.filepaths.price_data.clone(),
-           FileOptions::new(true, false, false),
+            self.filepaths.price_data.clone(),
+            FileOptions::new(true, false, false),
         );
 
-       price_io.read_serialized(file_io::SerChoice::YAML)
+        price_io.read_serialized(file_io::SerChoice::YAML)
     }
-
 
     /// Removes items from the internal list.
     /// Returns number of items removed.
@@ -192,7 +184,7 @@ impl ItemSearch {
                 debug!(desc = "Removed ignored items.", count = %n);
                 n
             }
-            Err(e) => log_panic("Number of ignored items is too big.", e)
+            Err(e) => log_panic("Number of ignored items is too big.", e),
         }
     }
 
@@ -215,6 +207,5 @@ impl ItemSearch {
             let item = Item::new(name.clone(), id, price_data);
             self.items.insert(name, item);
         }
-        
     }
 }

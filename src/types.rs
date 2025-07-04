@@ -72,15 +72,17 @@ pub struct Row {
 impl Row {
     /// Total time in hours
     fn total_time(&self) -> Option<f32> {
+        #[allow(clippy::cast_precision_loss)]
         // Number of recipes isn't going to be larger than 10,000 at most
         // This is well under f32 limit of 2^23.
-        Some(self.recipe_time? * (self.number as f32) / SEC_IN_HOUR as f32)
+        Some(self.recipe_time? * (self.number as f32) / f32::from(SEC_IN_HOUR))
     }
     fn total_gp(&self) -> i32 {
         self.recipe_gp * self.number
     }
     fn gph(&self) -> Option<i32> {
-        Some((SEC_IN_HOUR as f32 * self.recipe_gp as f32 / self.recipe_time?) as i32)
+        #[allow(clippy::cast_possible_truncation, clippy::cast_precision_loss)]
+        Some((f32::from(SEC_IN_HOUR) * self.recipe_gp as f32 / self.recipe_time?) as i32)
     }
 }
 
@@ -93,8 +95,8 @@ impl std::fmt::Display for Row {
             self.recipe_gp,
             self.total_gp(),
             self.total_time()
-                .map_or_else(|| "".to_string(), |t| t.to_string()),
-            self.gph().map_or_else(|| "".to_string(), |t| t.to_string()),
+                .map_or_else(String::new, |t| t.to_string()),
+            self.gph().map_or_else(String::new, |t| t.to_string()),
         )
     }
 }
