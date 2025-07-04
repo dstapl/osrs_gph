@@ -2,8 +2,8 @@
 
 /// For use with `latest` timespan
 pub mod latest {
-    use std::{collections::HashMap, fmt};
     use serde::{de::Visitor, ser::SerializeStruct, Deserialize, Deserializer, Serialize};
+    use std::{collections::HashMap, fmt};
 
     #[derive(Debug, Clone, Default, Copy)]
     pub struct PriceDatum {
@@ -68,7 +68,8 @@ pub mod latest {
                 type Value = PriceDataType;
 
                 fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-                    formatter.write_str("field `data` containing <String, PriceDatum> key-value pairs")
+                    formatter
+                        .write_str("field `data` containing <String, PriceDatum> key-value pairs")
                 }
 
                 // #[inline]
@@ -78,9 +79,10 @@ pub mod latest {
                 {
                     // While there are entries remaining in the input, add them
                     // into our map.
-                    let mut api_data = HashMap::<String, HashMap<String, PriceDatum>>::with_capacity(
-                        map.size_hint().unwrap_or(0),
-                    );
+                    let mut api_data =
+                        HashMap::<String, HashMap<String, PriceDatum>>::with_capacity(
+                            map.size_hint().unwrap_or(0),
+                        );
                     while let Some((key, value)) = map.next_entry()? {
                         api_data.insert(key, value); // Should just insert "data" key
                     }
@@ -138,7 +140,5 @@ pub mod latest {
     }
 }
 
-
 /// TODO
-pub mod oldest {
-}
+pub mod oldest {}

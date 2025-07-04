@@ -1,2 +1,3 @@
-- [ ] runtime.log file not being cleared when the number of recipes is lower (table isn't as long)
-    - [ ] Check the sync_all function
+- [x] runtime.log file not being cleared when the number of recipes is lower (table isn't as long)
+    - [x] Check the sync_all function
+- [ ] Change logging macros to correct types: debug -> trace where applicable

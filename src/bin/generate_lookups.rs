@@ -4,7 +4,6 @@ use osrs_gph::file_io::{self, FileOptions, SerChoice};
 use osrs_gph::log_match_panic;
 use std::collections::HashMap;
 
-
 use tracing::{debug, span, trace, Level};
 
 fn main() {
@@ -24,24 +23,21 @@ fn main() {
 
     let mapping_path_str: String = config.filepaths.lookup_data.api_mapping;
 
-
-    let mut mapping_fio = file_io::FileIO::new(
-            mapping_path_str.clone(),
-            FileOptions::new(true, true, true)
-        );
+    let mut mapping_fio =
+        file_io::FileIO::new(mapping_path_str.clone(), FileOptions::new(true, true, true));
     trace!(desc = "Created mapping_fio");
 
-    let mapping: Vec<MappingItem> = log_match_panic(mapping_fio.read_serialized(SerChoice::JSON),
-        &format!("Reading mapping file {}", mapping_path_str),
-        &format!("Failed to parse mapping {}", mapping_path_str)
+    let mapping: Vec<MappingItem> = log_match_panic(
+        mapping_fio.read_serialized(SerChoice::JSON),
+        &format!("Reading mapping file {mapping_path_str}"),
+        &format!("Failed to parse mapping {mapping_path_str}"),
     );
 
     let mut id_to_name = HashMap::<String, String>::with_capacity(mapping.len());
     trace!(desc = "Initialised id_to_name HashMap");
-    
+
     let mut name_to_id = HashMap::<String, String>::with_capacity(mapping.len());
     trace!(desc = "Initialised name_to_id HashMap");
-
 
     debug!(desc = "Inserting values into mappings...");
     for item in mapping {
@@ -58,24 +54,28 @@ fn main() {
     trace!(desc = "Setting mapping_fio file path", value = %id_to_name_str);
     mapping_fio.set_file_path(id_to_name_str);
 
-    log_match_panic(mapping_fio.clear_contents(),
+    log_match_panic(
+        mapping_fio.clear_contents(),
         "Clearing file contents.",
-        "Failed to clear file contents."
+        "Failed to clear file contents.",
     );
-    log_match_panic(mapping_fio.write_serialized(&id_to_name),
+    log_match_panic(
+        mapping_fio.write_serialized(&id_to_name),
         "Writing serialised data to id_to_name file.",
-        "Failed to write data."
+        "Failed to write data.",
     );
 
     trace!(desc = "Setting mapping_fio file path", value = %name_to_id_str);
     mapping_fio.set_file_path(name_to_id_str);
 
-    log_match_panic(mapping_fio.clear_contents(),
+    log_match_panic(
+        mapping_fio.clear_contents(),
         "Clearing file contents.",
-        "Failed to clear file contents."
+        "Failed to clear file contents.",
     );
-    log_match_panic(mapping_fio.write_serialized(&name_to_id),
+    log_match_panic(
+        mapping_fio.write_serialized(&name_to_id),
         "Writing serialised data to name_to_id file.",
-        "Failed to write data."
+        "Failed to write data.",
     );
 }

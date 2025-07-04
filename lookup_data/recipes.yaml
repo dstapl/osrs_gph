@@ -1,10 +1,12 @@
 # Template: # Reference name
 #   name: "Template" # Display name (Not necessarily same as reference)
+#   members: false # Whether this method requires membership or not
 #   inputs: {}
 #   outputs: {}
 #   time: 1  # Measured in ticks
 Ruby Rings:
   name: "Ruby Rings"
+  members: false
   inputs:
     Gold bar: 1
     Ruby: 1
@@ -13,6 +15,7 @@ Ruby Rings:
   time: 3
 Ruby Necklaces:
   name: "Ruby Necklaces"
+  members: false
   inputs:
     Gold bar: 1
     Ruby: 1
@@ -21,6 +24,7 @@ Ruby Necklaces:
   time: 3
 Ruby Amulets:
   name: "Ruby Amulets"
+  members: false
   inputs:
     Gold bar: 1
     Ruby: 1
@@ -29,6 +33,7 @@ Ruby Amulets:
   time: 3
 Emerald Rings:
   name: "Emerald Rings"
+  members: false
   inputs:
     Gold bar: 1
     Emerald: 1
@@ -37,6 +42,7 @@ Emerald Rings:
   time: 3
 Emerald Necklaces:
   name: "Emerald Necklaces"
+  members: false
   inputs:
     Gold bar: 1
     Emerald: 1
@@ -45,6 +51,7 @@ Emerald Necklaces:
   time: 3
 Emerald Amulets:
   name: "Emerald Amulets"
+  members: false
   inputs:
     Gold bar: 1
     Emerald: 1
@@ -53,6 +60,7 @@ Emerald Amulets:
   time: 3
 Diamond Rings:
   name: "Diamond Rings"
+  members: false
   inputs:
     Gold bar: 1
     Diamond: 1
@@ -61,6 +69,7 @@ Diamond Rings:
   time: 3
 Diamond Necklaces:
   name: "Diamond Necklaces"
+  members: false
   inputs:
     Gold bar: 1
     Diamond: 1
@@ -69,6 +78,7 @@ Diamond Necklaces:
   time: 3
 Diamond Amulets:
   name: "Diamond Amulets"
+  members: false
   inputs:
     Gold bar: 1
     Diamond: 1
@@ -77,6 +87,7 @@ Diamond Amulets:
   time: 3
 Sapphire Rings:
   name: "Sapphire Rings"
+  members: false
   inputs:
     Gold bar: 1
     Sapphire: 1
@@ -85,6 +96,7 @@ Sapphire Rings:
   time: 3
 Sapphire Necklaces:
   name: "Sapphire Necklaces"
+  members: false
   inputs:
     Gold bar: 1
     Sapphire: 1
@@ -93,6 +105,7 @@ Sapphire Necklaces:
   time: 3
 Sapphire Amulets:
   name: "Sapphire Amulets"
+  members: false
   inputs:
     Gold bar: 1
     Sapphire: 1
@@ -101,6 +114,7 @@ Sapphire Amulets:
   time: 3
 Humidify Clay:
   name: "Humidify Clay"
+  members: true
   inputs:
     Astral rune: 1
     Clay: 27
@@ -109,6 +123,7 @@ Humidify Clay:
   time: 6
 Enchanting dragonstone jewellery (Manual):
   name: "Enchanting dragonstone jewellery (Manual)"
+  members: true
   inputs:
     Dragonstone bracelet: 1
     Cosmic rune: 1
@@ -117,6 +132,7 @@ Enchanting dragonstone jewellery (Manual):
   time: 3
 Enchanting dragonstone jewellery (Autocast):
   name: "Enchanting dragonstone jewellery (Autocast)"
+  members: true
   inputs:
     Dragonstone bracelet: 1
     Cosmic rune: 1
@@ -125,6 +141,7 @@ Enchanting dragonstone jewellery (Autocast):
   time: 7
 Dismantling bracelets of ethereum:
   name: "Dismantling bracelets of ethereum"
+  members: true
   inputs:
     Bracelet of ethereum (uncharged): 1
   outputs:
@@ -132,6 +149,7 @@ Dismantling bracelets of ethereum:
   time: 1
 Charging and alchemising bracelets of ethereum:
   name: "Charging and alchemising bracelets of ethereum"
+  members: true
   inputs:
     Bracelet of ethereum (uncharged): 1
     Revenant ether: 1
@@ -141,6 +159,7 @@ Charging and alchemising bracelets of ethereum:
   time: 13
 Crushing bird nests (Auto):
   name: "Crushing bird nests (Auto)"
+  members: true
   inputs:
     Bird nest: 1
   outputs:
@@ -148,6 +167,7 @@ Crushing bird nests (Auto):
   time: 3
 Crushing bird nests (Manual):
   name: "Crushing bird nests (Manual)"
+  members: true
   inputs:
     Bird nest: 1
   outputs:
@@ -155,6 +175,7 @@ Crushing bird nests (Manual):
   time: 1
 Degriming grimy cadantine:
   name: "Degriming grimy cadantine"
+  members: true
   inputs:
     Grimy cadantine: 27
     Nature rune: 2
@@ -163,6 +184,7 @@ Degriming grimy cadantine:
   time: 8
 Degriming grimy torstol:
   name: "Degriming grimy torstol"
+  members: true
   inputs:
     Grimy torstol: 27
     Nature rune: 2
@@ -171,6 +193,7 @@ Degriming grimy torstol:
   time: 8
 Degriming grimy avantoe:
   name: "Degriming grimy avantoe"
+  members: true
   inputs:
     Grimy avantoe: 27
     Nature rune: 2
@@ -179,6 +202,7 @@ Degriming grimy avantoe:
   time: 8
 Degriming grimy lantadyme:
   name: "Degriming grimy lantadyme"
+  members: true
   inputs:
     Grimy lantadyme: 27
     Nature rune: 2
@@ -187,6 +211,7 @@ Degriming grimy lantadyme:
   time: 8
 Degriming grimy ranarr weed:
   name: "Degriming grimy ranarr weed"
+  members: true
   inputs:
     Grimy ranarr weed: 27
     Nature rune: 2
@@ -195,6 +220,7 @@ Degriming grimy ranarr weed:
   time: 8
 Making irit potions:
   name: "Making irit potions"
+  members: true
   inputs:
     Irit leaf: 1
     Vial of water: 1
@@ -203,6 +229,7 @@ Making irit potions:
   time: 2
 Making dwarf weed potions:
   name: "Making dwarf weed potions"
+  members: true
   inputs:
     Dwarf weed: 1
     Vial of water: 1
@@ -211,6 +238,7 @@ Making dwarf weed potions:
   time: 2
 Making lantadyme potions:
   name: "Making lantadyme potions"
+  members: true
   inputs:
     Lantadyme: 1
     Vial of water: 1
@@ -219,6 +247,7 @@ Making lantadyme potions:
   time: 2
 Making cadantine potions:
   name: "Making cadantine potions"
+  members: true
   inputs:
     Cadantine: 1
     Vial of water: 1
@@ -227,6 +256,7 @@ Making cadantine potions:
   time: 2
 Making avantoe potions:
   name: "Making avantoe potions"
+  members: true
   inputs:
     Avantoe: 1
     Vial of water: 1
@@ -235,6 +265,7 @@ Making avantoe potions:
   time: 2
 Making toadflax potions:
   name: "Making toadflax potions"
+  members: true
   inputs:
     Toadflax: 1
     Vial of water: 1
@@ -243,6 +274,7 @@ Making toadflax potions:
   time: 2
 Making kwuarm potions:
   name: "Making kwuarm potions"
+  members: true
   inputs:
     Kwuarm: 1
     Vial of water: 1
@@ -251,6 +283,7 @@ Making kwuarm potions:
   time: 2
 Making ranarr potions:
   name: "Making ranarr potions"
+  members: true
   inputs:
     Ranarr weed: 1
     Vial of water: 1
@@ -259,6 +292,7 @@ Making ranarr potions:
   time: 2
 Making snapdragon potions:
   name: "Making snapdragon potions"
+  members: true
   inputs:
     Snapdragon: 1
     Vial of water: 1
@@ -267,6 +301,7 @@ Making snapdragon potions:
   time: 2
 Making Guthix rests:
   name: "Making Guthix rests"
+  members: true
   inputs:
     Bowl of hot water: 1
     Empty cup: 1
@@ -279,6 +314,7 @@ Making Guthix rests:
     Bowl: 1
 Casting Bones to Bananas (F2P):
   name: "Casting Bones to Bananas (F2P)"
+  members: false
   inputs:
     Bones: 26
     Nature rune: 1
@@ -287,6 +323,7 @@ Casting Bones to Bananas (F2P):
     Banana: 26
 Casting Tan Leather (Black d'hide):
   name: "Casting Tan Leather (Black d'hide)"
+  members: true
   inputs:
     Nature rune: 1
     Astral rune: 2
@@ -296,6 +333,7 @@ Casting Tan Leather (Black d'hide):
   time: 3
 Casting Tan Leather (Red d'hide):
   name: "Casting Tan Leather (Red d'hide)"
+  members: true
   inputs:
     Nature rune: 1
     Astral rune: 2
@@ -305,6 +343,7 @@ Casting Tan Leather (Red d'hide):
   time: 3
 Making Super energy potions:
   name: "Making Super energy potions"
+  members: true
   inputs:
     Avantoe potion (unf): 1
     Mort myre fungus: 1
@@ -313,6 +352,7 @@ Making Super energy potions:
   time: 2
 Gargoyles (Off-task):
   name: "Gargoyles (Off-task)"
+  members: true
   inputs:
     Coins: 15300
   outputs:
@@ -332,6 +372,7 @@ Gargoyles (Off-task):
 # Adjust time to include smithing
 Smelting Steel Bars:
   name: "Smelting Steel Bars"
+  members: false
   inputs:
     Iron ore: 9
     Coal: 18
@@ -340,6 +381,7 @@ Smelting Steel Bars:
   time: 36
 Smelting Adamantite Bars:
   name: "Smelting Adamantite Bars"
+  members: false
   inputs:
     Adamantite ore: 4
     Coal: 24
@@ -348,6 +390,7 @@ Smelting Adamantite Bars:
   time: 16
 Smelting Mithril Bars:
   name: "Smelting Mithril Bars"
+  members: false
   inputs:
     Mithril ore: 5
     Coal: 20

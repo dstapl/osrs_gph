@@ -1,8 +1,11 @@
-//! Handling recipes defined in lookup_data/recipes.yaml
+//! Handling recipes defined in `lookup_data/recipes.yaml`
 use serde::{de::Visitor, Deserialize};
 
-use tracing::{trace, debug, warn};
-use crate::{file_io::{FileIO, FileOptions}, log_match_panic};
+use crate::{
+    file_io::{FileIO, FileOptions},
+    log_match_panic,
+};
+use tracing::{debug, trace, warn};
 
 use std::{collections::HashMap, fmt::Debug};
 
@@ -18,6 +21,8 @@ pub enum RecipeTime {
 #[derive(Debug, Deserialize, Default, Clone)]
 pub struct Recipe {
     pub name: String,
+    pub members: bool,
+
     pub inputs: HashMap<String, f32>,
     pub outputs: HashMap<String, f32>,
 
@@ -36,7 +41,7 @@ impl<'de> Deserialize<'de> for RecipeTime {
         D: serde::Deserializer<'de>,
     {
         struct RecipeTimeVisitor;
-        impl<'de> Visitor<'de> for RecipeTimeVisitor {
+        impl Visitor<'_> for RecipeTimeVisitor {
             type Value = RecipeTime;
 
             fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
@@ -49,7 +54,6 @@ impl<'de> Deserialize<'de> for RecipeTime {
             {
                 Ok(RecipeTime::INVALID)
             }
-
 
             #[allow(clippy::cast_possible_truncation)]
             fn visit_f64<E>(self, v: f64) -> Result<Self::Value, E>
@@ -87,7 +91,6 @@ impl<'de> Deserialize<'de> for RecipeTime {
     }
 }
 
-
 impl Recipe {
     pub fn new<S: Into<String>, T: Into<RecipeTime>>(
         name: S,
@@ -97,6 +100,7 @@ impl Recipe {
     ) -> Self {
         Self {
             name: name.into(),
+            members: false,
             inputs,
             outputs,
             ticks: ticks.into(),
@@ -117,20 +121,19 @@ impl RecipeBook {
 
     pub fn load_default_recipes(&mut self, recipe_path: String) {
         // let recipes_fio = Logging::<FileIO<S>>::new(, recipe_path);
-        let mut recipes_fio = FileIO::new(
-            recipe_path,
-            FileOptions::new(true, false, false)
-        );
+        let mut recipes_fio = FileIO::new(recipe_path, FileOptions::new(true, false, false));
 
         // TODO: Implement choice of other SerChoice options
-        let file_output = recipes_fio.read_serialized::<HashMap<String, Recipe>>(
-            crate::file_io::SerChoice::YAML
-        );
+        let file_output =
+            recipes_fio.read_serialized::<HashMap<String, Recipe>>(crate::file_io::SerChoice::YAML);
 
         let mut recipe_list: Vec<Recipe> = log_match_panic(
-            file_output, 
-            "Read recipe list from file.", "Failed to load recipes."
-        ).into_values().collect();
+            file_output,
+            "Read recipe list from file.",
+            "Failed to load recipes.",
+        )
+        .into_values()
+        .collect();
 
         // Filer out invalid recipes; using .isvalid()
         // Log any invalid recipes
@@ -145,7 +148,8 @@ impl RecipeBook {
             }
         });
 
-        debug!("Filtered out {} invalid recipes.",
+        debug!(
+            "Filtered out {} invalid recipes.",
             before_len - recipe_list.len()
         );
 
@@ -165,7 +169,7 @@ impl RecipeBook {
 
         if recipe_o.is_some() {
             trace!("Recipe `{}` already existed...updating", recipe_name);
-        };
+        }
 
         recipe_o
     }
@@ -190,7 +194,7 @@ impl RecipeBook {
 
         if rec.is_none() {
             warn!("Invalid recipe name: {}", recipe_name);
-        };
+        }
 
         rec
     }
@@ -221,12 +225,12 @@ impl RecipeTime {
 }
 
 impl std::fmt::Display for RecipeTime {
-   fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             RecipeTime::Time(t) => write!(f, "{t}"),
             RecipeTime::INVALID => write!(f, ""),
         }
-   } 
+    }
 }
 
 impl<F: Into<f32>> From<F> for RecipeTime {
@@ -239,4 +243,3 @@ impl<F: Into<f32>> From<F> for RecipeTime {
         }
     }
 }
-
