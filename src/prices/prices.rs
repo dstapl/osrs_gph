@@ -32,7 +32,7 @@ pub struct PriceHandle {
     pub pmargin: f32,
 }
 
-const SECOND_PER_TICK: f32 = 0.6;
+use crate::types::SECOND_PER_TICK;
 
 impl PriceHandle {
     pub fn new(all_items: ItemSearch, recipe_list: RecipeBook, coins: i32, pmargin: f32) -> Self {

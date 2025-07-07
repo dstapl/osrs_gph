@@ -8,6 +8,10 @@ pub mod item_search;
 pub mod prices;
 pub mod types;
 
+// TODO: Create folder for different front-end results
+//      GUI, markdown file, etc.
+pub mod results_writer;
+
 // TODO: Migrate contents to lib.rs instead?
 pub mod config;
 
