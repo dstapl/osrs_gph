@@ -10,7 +10,7 @@ use osrs_gph::{
     api::Api,
     config,
     file_io::{FileIO, FileOptions},
-    helpers::Input,
+    helpers::{Input, center_align},
     item_search::recipes::RecipeBook,
     log_match_panic, log_panic,
     prices::prices::PriceHandle,
@@ -340,13 +340,3 @@ fn markdown_table(rows: Vec<Vec<String>>) -> (String, usize) {
     (output, max_len)
 }
 
-fn center_align(s: &str, width: usize) -> String {
-    if width <= s.len() {
-        s.to_string()
-    } else {
-        let total_padding = width - s.len();
-        let left_pad = total_padding / 2;
-        let right_pad = total_padding - left_pad;
-        format!("{}{}{}", " ".repeat(left_pad), s, " ".repeat(right_pad))
-    }
-}

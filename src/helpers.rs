@@ -63,3 +63,14 @@ impl Input for String {
         }
     }
 }
+
+pub fn center_align(s: &str, width: usize) -> String {
+    if width <= s.len() {
+        s.to_string()
+    } else {
+        let total_padding = width - s.len();
+        let left_pad = total_padding / 2;
+        let right_pad = total_padding - left_pad;
+        format!("{}{}{}", " ".repeat(left_pad), s, " ".repeat(right_pad))
+    }
+}
