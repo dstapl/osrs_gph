@@ -54,9 +54,11 @@ display:
       - Smelting Adamantite Bars
 
   # Filtering results (Backend)
-  must_profit: true
-  show_hidden: false
-  reverse: true
+  filters:
+    must_profit: true
+    show_hidden: false
+    reverse: true
+
   # Only show results from: f2p, p2p, both
   membership: f2p
   

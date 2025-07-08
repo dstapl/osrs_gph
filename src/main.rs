@@ -10,13 +10,14 @@ use osrs_gph::{
     api::Api,
     config,
     file_io::{FileIO, FileOptions},
-    helpers::{Input, center_align},
+    helpers::{center_align, Input},
     item_search::recipes::RecipeBook,
     log_match_panic, log_panic,
     prices::prices::PriceHandle,
-    types::ROW_HEADERS,
+    results_writer::markdown::OptimalOverview,
+    types::{ResultsTable, NUM_HEADERS},
 };
-use tracing::{info, instrument, span, trace, warn, Level};
+use tracing::{info, span, trace, warn, Level};
 
 fn main() {
     let conf: config::Config = config::load_config("config.yaml");
@@ -108,15 +109,21 @@ fn main() {
     );
 
     trace!(desc = "Writing overview to file");
-    // TODO: Use traits from types.rs
+    let mut writer = OptimalOverview::new(optimal_overview.clone(), [0; NUM_HEADERS]);
+
+    // TODO: Optimise into reduced/buffered calls?
+    // Set append mode since all rows are written in separate calls
+    file = file.set_append(true);
+
     log_match_panic(
-        write_markdown(&mut file, &optimal_overview),
+        writer.write_table(&mut file),
         "Wrote table to optimal_overview",
         "Failed to write table to optimal_overview",
     );
 
-    trace!(desc = "Creating recipe lookups");
+    file = file.set_append(false);
 
+    trace!(desc = "Creating recipe lookups");
     // Get top n from the optimal overview
     let mut recipe_lookup_list: Vec<(String, Vec<Vec<String>>)> =
         optimal_overview
@@ -126,7 +133,9 @@ fn main() {
                 "Number of values to take from top of optimal overview exceeds usize limit",
             ))
             .filter_map(|row| {
-                let recipe_s = row[0].clone();
+                // TODO: This won't include any rows that have a name modifier
+                // E.g. if `*` is appended to the name due to filters
+                let recipe_s = row.name.clone();
                 let x = price_handle.recipe_list.get_recipe(&recipe_s)?;
                 let specific_lookup = price_handle.recipe_lookup_from_recipe(x)?;
                 Some((recipe_s, specific_lookup))
@@ -188,69 +197,69 @@ fn request_new_prices_from_api(api_settings: &config::Api, file: &mut FileIO) {
     );
 }
 
-// TODO: Takes in a nested iterator
-#[instrument(level = "trace", skip(file, data))]
-fn write_markdown(file: &mut FileIO, data: &osrs_gph::prices::prices::Table) -> io::Result<()> {
-    // Open the underlying file handle
-    let mut file = file.open_file().expect("Failed to access inner file");
-
-    let num_cols = ROW_HEADERS.len();
-
-    // Collect headers and rows into one iterable to calculate widths
-    let mut col_widths = vec![0; num_cols];
-
-    // Check headers lengths
-    for (i, header) in ROW_HEADERS.iter().enumerate() {
-        col_widths[i] = col_widths[i].max(header.len());
-    }
-
-    // Check all data rows lengths
-    for row in data {
-        for (i, cell) in row.iter().enumerate() {
-            col_widths[i] = col_widths[i].max(cell.len());
-        }
-    }
-
-    // Format a row with custom alignment rules
-    fn format_row(row: &[String], col_widths: &[usize]) -> String {
-        let num_cols = col_widths.len();
-
-        let cells = row.iter().enumerate().map(|(i, cell)| {
-            let width = col_widths[i];
-            if i == 0 {
-                // Left align first two columns
-                format!("{cell:<width$}")
-            } else if i >= num_cols - 2 {
-                // Center align last two columns
-                center_align(cell, width)
-            } else {
-                // Right align others
-                format!("{cell:>width$}")
-            }
-        });
-
-        format!("| {} |", cells.collect::<Vec<_>>().join(" | "))
-    }
-
-    // Write header row
-    let header_row: Vec<String> = ROW_HEADERS.iter().map(|&s| s.to_string()).collect();
-    writeln!(file, "{}", format_row(&header_row, &col_widths))?;
-
-    // Write separator row
-    let separator_cells = col_widths.iter().map(|w| "-".repeat(*w.max(&3)));
-    writeln!(
-        file,
-        "| {} |",
-        separator_cells.collect::<Vec<_>>().join(" | ")
-    )?;
-
-    // Write data rows
-    for row in data {
-        writeln!(file, "{}", format_row(row, &col_widths))?;
-    }
-
-    Ok(())
-}
+// // TODO: Takes in a nested iterator
+// #[instrument(level = "trace", skip(file, data))]
+// fn write_markdown(file: &mut FileIO, data: &osrs_gph::prices::prices::Table) -> io::Result<()> {
+//     // Open the underlying file handle
+//     let mut file = file.open_file().expect("Failed to access inner file");
+//
+//     let num_cols = ROW_HEADERS.len();
+//
+//     // Collect headers and rows into one iterable to calculate widths
+//     let mut col_widths = vec![0; num_cols];
+//
+//     // Check headers lengths
+//     for (i, header) in ROW_HEADERS.iter().enumerate() {
+//         col_widths[i] = col_widths[i].max(header.len());
+//     }
+//
+//     // Check all data rows lengths
+//     for row in data {
+//         for (i, cell) in row.iter().enumerate() {
+//             col_widths[i] = col_widths[i].max(cell.len());
+//         }
+//     }
+//
+//     // Format a row with custom alignment rules
+//     fn format_row(row: &[String], col_widths: &[usize]) -> String {
+//         let num_cols = col_widths.len();
+//
+//         let cells = row.iter().enumerate().map(|(i, cell)| {
+//             let width = col_widths[i];
+//             if i == 0 {
+//                 // Left align first two columns
+//                 format!("{cell:<width$}")
+//             } else if i >= num_cols - 2 {
+//                 // Center align last two columns
+//                 center_align(cell, width)
+//             } else {
+//                 // Right align others
+//                 format!("{cell:>width$}")
+//             }
+//         });
+//
+//         format!("| {} |", cells.collect::<Vec<_>>().join(" | "))
+//     }
+//
+//     // Write header row
+//     let header_row: Vec<String> = ROW_HEADERS.iter().map(|&s| s.to_string()).collect();
+//     writeln!(file, "{}", format_row(&header_row, &col_widths))?;
+//
+//     // Write separator row
+//     let separator_cells = col_widths.iter().map(|w| "-".repeat(*w.max(&3)));
+//     writeln!(
+//         file,
+//         "| {} |",
+//         separator_cells.collect::<Vec<_>>().join(" | ")
+//     )?;
+//
+//     // Write data rows
+//     for row in data {
+//         writeln!(file, "{}", format_row(row, &col_widths))?;
+//     }
+//
+//     Ok(())
+// }
 
 fn write_recipe_lookup(
     writer: &mut FileIO,
@@ -339,4 +348,3 @@ fn markdown_table(rows: Vec<Vec<String>>) -> (String, usize) {
 
     (output, max_len)
 }
-

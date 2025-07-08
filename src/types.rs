@@ -1,6 +1,6 @@
-use std::fmt;
+use std::io;
 
-use crate::helpers::{f_round, floor};
+use crate::helpers::{f_round, ToCommaString};
 
 pub const SECOND_PER_TICK: f32 = 0.6;
 pub const SEC_IN_HOUR: u16 = 60 * 60;
@@ -15,60 +15,22 @@ pub const ROW_HEADERS: [&str; NUM_HEADERS] = [
 
 pub trait ResultsTable {
     type Row;
-    type Table;
 
     /// Print the separators between tables
     fn table_separator(&self) -> String;
     /// Formats a row for printing
-    fn fmt_item(&self, row: Self::Row) -> String;
+    fn fmt_item(&self, row: &Self::Row) -> String;
     fn fmt_header(&self) -> String;
 
     /// Create output of current internal table
-    fn create_table(&self) -> Self::Table;
+    /// TODO: `io::Write` or Formatter
+    /// # Errors
+    /// Will error if writing to `writer` fails. Refer to `io::Error`.
+    fn write_table(&mut self, writer: &mut impl io::Write) -> io::Result<()>;
 }
 
-
-// struct Table {
-//     separator_value: String,
-// }
-// struct OptimalOverview(Table);
-// struct RecipeLookup(Table);
-
-// impl FileTable for OptimalOverview{
-//     fn fmt_item<T>(&self, row: T) -> String {
-
-//     }
-//     fn table_separator(&self) -> String {
-
-//     }
-// }
-// impl FileTable for RecipeLookup{
-//     fn fmt_item(&self, row: Row) -> String {
-
-//     }
-//     fn table_separator(&self) -> String {
-
-//     }
-// }
-// impl FileTable for Table {
-//     fn table_separator(&self) -> String {
-//         match self.file_type {
-//             FileType::OptimalOverview => self.separator_value.clone() + ",",
-//             FileType::RecipeLookup => format!("|{}|", self.separator_value.replace(',', "|")),
-//         }
-//     }
-
-//     fn fmt_item(&self, row: Row) -> String {
-//         match self.file_type {
-//             FileType::OptimalOverview => format!("{},", row),
-//             FileType::RecipeLookup => format!("| {} |", row),
-//         }
-//     }
-// }
-
-
 /// Internal row format to be processed on output
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone)]
 pub struct OverviewRow {
     // &str?
     pub name: String,
@@ -81,7 +43,7 @@ pub struct OverviewRow {
     pub number: i32, // TODO: Cap at i32 limit if using u32
 }
 /// Internal table
-pub type OverviewTable = Vec<Option<OverviewRow>>; // Blank Rows are None
+pub type OverviewTable = Vec<OverviewRow>; // Blank Rows are None
 
 impl OverviewRow {
     /// Total time in hours
@@ -98,7 +60,16 @@ impl OverviewRow {
     }
     pub fn gph(&self) -> i32 {
         #[allow(clippy::cast_possible_truncation, clippy::cast_precision_loss)]
-        return (f32::from(SEC_IN_HOUR) * self.profit as f32 / self.time_sec)
-            .floor() as i32
+        return (f32::from(SEC_IN_HOUR) * self.profit as f32 / self.time_sec).floor() as i32;
+    }
+
+    pub fn to_string_cells(&self) -> [String; NUM_HEADERS] {
+        [
+            self.name.clone(),
+            self.profit.to_comma_sep_string(),
+            self.total_gp().to_comma_sep_string(),
+            self.total_time().to_string(),
+            self.gph().to_comma_sep_string(),
+        ]
     }
 }

@@ -19,15 +19,19 @@ fn flush_stout() {
     std::io::stdout().flush().ok();
 }
 
-pub fn number_to_comma_sep_string<T: num_format::ToFormattedStr>(x: &T) -> String {
-    // Create a stack-allocated buffer...
-    let mut buf = num_format::Buffer::default();
+pub trait ToCommaString {
+    fn to_comma_sep_string(self) -> String;
+}
 
-    // Write "1,000,000" into the buffer...
-    buf.write_formatted(x, &num_format::Locale::en);
+impl<T: num_format::ToFormattedStr> ToCommaString for T {
+    fn to_comma_sep_string(self) -> String {
+        let mut buf = num_format::Buffer::default();
 
-    // Get a view into the buffer as a &str...
-    buf.to_string()
+        // Format number as comma-separated
+        buf.write_formatted(&self, &num_format::Locale::en);
+
+        buf.to_string()
+    }
 }
 
 pub trait Input {

@@ -97,45 +97,29 @@ type Weights = [f32; 4];
 pub mod custom_types {
     use std::cmp::Ordering;
 
-    use crate::prices::prices::{Table, _TableRow};
     use itertools::Itertools;
+
+    use crate::types::OverviewRow;
 
     pub type Weights = super::Weights;
 
-    fn lin_scalarization(x: &_TableRow, weights: &Weights) -> Option<f32> {
-        // Want to multiply weights with x, starting from 2nd element (i32)
-        let parsed = x
-            .iter()
-            .skip(1)
-            .filter_map(|c| {
-                // TODO: Quicker to just always do replace branch?
-                if c.contains(',') {
-                    // Parse comma strings
-                    let p = c.replace(',', "").parse::<i32>();
-                    // dbg!(&p);
-                    #[allow(clippy::cast_precision_loss)]
-                    p.ok().map(|a| a as f32)
-                } else {
-                    c.parse::<f32>().ok()
-                }
-            })
-            .collect::<Vec<_>>();
-
-        // dbg!(&parsed);
-        if parsed.is_empty() {
-            None
-        } else {
-            Some(parsed.iter().zip(weights.iter()).map(|(a, b)| a * b).sum())
-        }
+    fn lin_scalarization(x: &OverviewRow, weights: &Weights) -> f32 {
+        #[allow(clippy::cast_precision_loss)]
+        [
+            x.profit as f32,
+            x.total_gp() as f32,
+            x.total_time(),
+            x.gph() as f32,
+        ]
+        .iter()
+        .zip(weights.iter())
+        .map(|(a, b)| a * b)
+        .sum()
     }
 
-    fn ls_compare(x: &_TableRow, y: &_TableRow, weights: &Weights) -> Ordering {
-        let Some(x_val) = lin_scalarization(x, weights) else {
-            return Ordering::Less;
-        };
-        let Some(y_val) = lin_scalarization(y, weights) else {
-            return Ordering::Greater;
-        };
+    fn ls_compare(x: &OverviewRow, y: &OverviewRow, weights: &Weights) -> Ordering {
+        let x_val = lin_scalarization(x, weights);
+        let y_val = lin_scalarization(y, weights);
 
         // dbg!(( (x_val, y_val) ));
         // (x_val > y_val) - (x_val < y_val)
@@ -143,8 +127,11 @@ pub mod custom_types {
         x_val.total_cmp(&y_val)
     }
 
-    /// Modifying function
-    pub fn optimal_sort(table: &Table, weights: &Weights, reverse: bool) -> Table {
+    pub fn optimal_sort(
+        table: &[OverviewRow],
+        weights: &Weights,
+        reverse: bool,
+    ) -> Vec<OverviewRow> {
         // let norm_weights = normalize_weights(weights); // Normalize
         // Return sorted based on ls_compare function
         // let norm_weights = *weights;
@@ -159,7 +146,7 @@ pub mod custom_types {
                 .sorted_by(|a, b| ls_compare(a, b, norm_weights))
         };
 
-        let mut output_table = Table::new();
+        let mut output_table = Vec::new();
         for row in row_list {
             output_table.push(row.clone());
         }

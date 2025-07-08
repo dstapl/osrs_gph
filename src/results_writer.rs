@@ -1,40 +1,30 @@
 //! Front-end as a file
 //! Implements traits from [`src/types.rs`]
 
-
-
 pub mod markdown {
-    use std::collections::HashMap;
-    use crate::{helpers::number_to_comma_sep_string, item_search::{item_search::Item, recipes::{Recipe, RecipeTime}}, prices::prices::PriceHandle, types::{OverviewRow, OverviewTable, ResultsTable, NUM_HEADERS, ROW_HEADERS, SECOND_PER_TICK}};
+    use crate::types::{OverviewRow, ResultsTable, NUM_HEADERS, ROW_HEADERS};
+    use std::io;
 
-    pub mod optimal_overview {
-        use std::fmt;
-    }
+    pub mod optimal_overview {}
 
     // TODO: Is String best for large numbers of recipes?
-    pub struct OptimalOverview { recipes: Vec<Recipe>, col_widths: [usize;NUM_HEADERS], table: String }
-    // struct RecipeLookup { data: String }
-
-    impl OptimalOverview {
-        /// Update col_widths with maximum cell widths across all rows
-        pub fn update_widths(&mut self) -> ! {
-            todo!()
-        }
+    pub struct OptimalOverview {
+        overview_rows: Vec<OverviewRow>,
+        col_widths: [usize; NUM_HEADERS],
     }
+    // TODO: struct RecipeLookup { data: String }
 
     impl Default for OptimalOverview {
         fn default() -> Self {
             Self {
-                recipes: Vec::new(), // Empty
-                col_widths: [0;NUM_HEADERS],
-                table: String::with_capacity(100) // TODO: What in bytes?
+                overview_rows: Vec::new(), // TODO: Initialise with_capacity?
+                col_widths: [0; NUM_HEADERS],
             }
         }
     }
 
     impl ResultsTable for OptimalOverview {
         type Row = OverviewRow;
-        type Table = Vec<Option<OverviewRow>>;
 
         fn table_separator(&self) -> String {
             // Optimal Overview only has one table
@@ -57,14 +47,16 @@ pub mod markdown {
             )
         }
 
-        fn fmt_item(&self, row: Self::Row) -> String {
+        fn fmt_item(&self, row: &Self::Row) -> String {
+            let string_cells = row.to_string_cells();
+
             format!(
                 "| {:<width0$} | {:>width1$} | {:>width2$} | {:>width3$} | {:>width4$} |",
-                row.name,
-                number_to_comma_sep_string(&row.profit),
-                number_to_comma_sep_string(&row.total_gp()),
-                row.total_time(),
-                number_to_comma_sep_string(&row.gph()),
+                string_cells[0],
+                string_cells[1],
+                string_cells[2],
+                string_cells[3],
+                string_cells[4],
                 width0 = self.col_widths[0],
                 width1 = self.col_widths[1],
                 width2 = self.col_widths[2],
@@ -73,8 +65,53 @@ pub mod markdown {
             )
         }
 
-        fn create_table(&self) -> Self::Table {
-           todo!(); 
+        /// TODO: Name
+        /// Format table and write to ouptut
+        fn write_table(&mut self, f: &mut impl io::Write) -> io::Result<()> {
+            // Update column widths
+            self.update_widths();
+
+            // Write header row
+            writeln!(f, "{}", self.fmt_header())?;
+
+            // Write separator row
+            let separator_cells = self.col_widths.iter().map(|w| "-".repeat(*w.max(&3)));
+            writeln!(f, "| {} |", separator_cells.collect::<Vec<_>>().join(" | "))?;
+
+            // Write data rows
+            for row in &self.overview_rows {
+                writeln!(f, "{}", self.fmt_item(row))?;
+            }
+
+            Ok(())
+        }
+    }
+
+    impl OptimalOverview {
+        pub fn new(overview_rows: Vec<OverviewRow>, col_widths: [usize; NUM_HEADERS]) -> Self {
+            OptimalOverview {
+                overview_rows,
+                col_widths,
+            }
+        }
+
+        /// Update `col_widths` with maximum cell widths across all rows
+        /// # TODO
+        /// Store results so not recalculating *EVERYTHING*
+        pub fn update_widths(&mut self) {
+            // Check headers lengths
+            for (i, header) in ROW_HEADERS.iter().enumerate() {
+                self.col_widths[i] = self.col_widths[i].max(header.len());
+            }
+
+            // Check all data rows lengths
+            for row in &self.overview_rows {
+                let string_cells = row.to_string_cells();
+
+                for (width, cell) in self.col_widths.iter_mut().zip(string_cells.iter()) {
+                    *width = (*width).max(cell.len());
+                }
+            }
         }
     }
 
@@ -96,7 +133,7 @@ pub mod markdown {
 
             let expected = "| Humidify Clay | 375 | 589,125 | 1.57 | 375,000 |";
             assert_eq!(
-                formatter.fmt_item(row),
+                formatter.fmt_item(&row),
                 expected,
                 "Check if the row/table format has changed."
             );
@@ -104,15 +141,10 @@ pub mod markdown {
 
         // #[test]
         // /// Check creation of a table
-        // fn print_table() {
+        // fn write_table() {
         //     todo!();
         //     // let table = Table{separator_value: "=".repeat(10), file_type: FileType::OptimalOverview};
         //     // println!("{table:?}");
         // }
     }
 }
-
-
-
-
-
