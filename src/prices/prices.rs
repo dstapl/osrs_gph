@@ -1,10 +1,11 @@
 use crate::{
-    config::Membership,
+    config::{Membership, OverviewFilter},
     helpers::{f_round, floor},
     item_search::{
         item_search::{Item, ItemSearch},
         recipes::{Recipe, RecipeBook, RecipeTime},
     },
+    types::OverviewRow,
 };
 
 use std::collections::HashMap;
@@ -13,7 +14,7 @@ use super::pareto_sort::custom_types::{optimal_sort, Weights};
 
 use tracing::{debug, warn};
 
-use crate::helpers::number_to_comma_sep_string;
+use crate::helpers::ToCommaString;
 
 // TODO: CHANGE TO ACTUAL TYPES
 pub type Row = (i32, i32, i32, RecipeTime);
@@ -53,13 +54,14 @@ impl PriceHandle {
         &self,
         sort_by_weights: &Weights,
         price_options: &crate::config::Display,
-    ) -> Table {
+    ) -> Vec<OverviewRow> {
         // let [profiting, show_hidden, reverse] = price_options;
-        let profiting = price_options.must_profit;
-        let show_hidden = price_options.show_hidden;
-        let reverse = price_options.reverse;
+        let profiting = price_options.filters[OverviewFilter::MustProfit];
+        let show_hidden = price_options.filters[OverviewFilter::ShowHidden];
+        let reverse = price_options.filters[OverviewFilter::Reverse];
         let membership_option = &price_options.membership;
 
+        // Get recipe input/output prices
         let recipe_list = self.recipe_list.get_all_recipes();
         assert!(!recipe_list.is_empty());
 
@@ -72,9 +74,10 @@ impl PriceHandle {
             .collect::<HashMap<_, _>>();
         assert!(!all_recipe_prices.is_empty());
 
-        let mut all_recipe_details = Table::new();
-
+        // Construct details
+        let mut all_recipe_details = Vec::new();
         let coins = self.coins;
+
         for (recipe_name, overview) in all_recipe_prices {
             let needs_members = recipe_list[recipe_name].members;
 
@@ -123,36 +126,31 @@ impl PriceHandle {
                 continue;
             }
 
-            let [rn_s, m_s, totm_s, tt_s, gph_s] = if (cant_afford && show_hidden)
-                || (no_profit && profiting && show_hidden)
-            {
-                [
-                    recipe_name.to_owned(),
-                    "#".to_owned(),
-                    "#".to_owned(),
-                    "#".to_owned(),
-                    "#".to_owned(),
-                ]
-            } else {
+            let row: OverviewRow = {
                 let amount = floor(f64::from(coins) / f64::from(recipe_cost));
 
-                let (total_time_h, gp_h) = PriceHandle::recipe_time_h(time, amount, margin, false);
-                [
-                    recipe_name.to_owned(),
-                    number_to_comma_sep_string(&margin),
-                    number_to_comma_sep_string(&(amount * margin)),
-                    total_time_h.to_string(),
-                    number_to_comma_sep_string(&gp_h),
-                ]
-            };
+                // let (total_time_h, gp_h) = PriceHandle::recipe_time_h(time, amount, margin, false);
 
-            let row: _TableRow = [rn_s, m_s, totm_s, tt_s, gph_s];
+                let mut name = recipe_name.to_owned();
+
+                if (cant_afford && show_hidden) || (no_profit && profiting && show_hidden) {
+                    // TODO: Better differentiate this
+                    // Add modifier to the recipe name ?
+                    name += " *";
+                }
+
+                OverviewRow {
+                    name,
+                    profit: margin,
+                    time_sec: time,
+                    number: amount,
+                }
+            };
 
             all_recipe_details.push(row);
         }
 
-        // all_recipe_details
-        // TODO: Does this actually modify?
+        // // TODO: Does this actually modify?
         optimal_sort(&all_recipe_details, sort_by_weights, reverse)
     }
 
@@ -241,8 +239,8 @@ impl PriceHandle {
 
                 (
                     recipe_time.to_string(),
-                    (norm.0.to_string(), number_to_comma_sep_string(&norm.1)),
-                    (pm.0.to_string(), number_to_comma_sep_string(&pm.1)),
+                    (norm.0.to_string(), norm.1.to_comma_sep_string()),
+                    (pm.0.to_string(), pm.1.to_comma_sep_string()),
                 )
             }
         };
@@ -275,10 +273,10 @@ impl PriceHandle {
 
             let row: Vec<String> = vec![
                 item.name.clone(),
-                number_to_comma_sep_string(&(amount as i32)),
-                number_to_comma_sep_string(&to_buy),
-                number_to_comma_sep_string(&price),
-                number_to_comma_sep_string(&total_item_price),
+                (amount as i32).to_comma_sep_string(),
+                to_buy.to_comma_sep_string(),
+                price.to_comma_sep_string(),
+                total_item_price.to_comma_sep_string(),
             ];
 
             recipe_lookup.push(row);
@@ -288,8 +286,8 @@ impl PriceHandle {
             "Total (Base)".to_owned(),
             String::new(),
             String::new(),
-            number_to_comma_sep_string(&cost),
-            number_to_comma_sep_string(&(cost * number)),
+            cost.to_comma_sep_string(),
+            (number * cost).to_comma_sep_string(),
         ]);
 
         recipe_lookup.push(Vec::new()); // Empty row
@@ -303,10 +301,10 @@ impl PriceHandle {
 
             let row: Vec<String> = vec![
                 item.name.clone(),
-                number_to_comma_sep_string(&(amount as i32)),
-                number_to_comma_sep_string(&to_buy),
-                number_to_comma_sep_string(&price),
-                number_to_comma_sep_string(&total_item_price),
+                (amount as i32).to_comma_sep_string(),
+                to_buy.to_comma_sep_string(),
+                price.to_comma_sep_string(),
+                total_item_price.to_comma_sep_string(),
             ];
 
             recipe_lookup.push(row);
@@ -316,18 +314,18 @@ impl PriceHandle {
             "Total (w/Tax Base)".to_owned(),
             String::new(),
             String::new(),
-            number_to_comma_sep_string(&revenue_taxed),
-            number_to_comma_sep_string(&(revenue_taxed * number)),
+            revenue_taxed.to_comma_sep_string(),
+            (number * revenue_taxed).to_comma_sep_string(),
         ]);
 
         recipe_lookup.push(Vec::new());
 
         recipe_lookup.push(vec![
             "Profit/Loss (w/Tax Base)".to_owned(),
-            number_to_comma_sep_string(&number),
+            number.to_comma_sep_string(),
             String::new(),
-            number_to_comma_sep_string(&profit),
-            number_to_comma_sep_string(&total_profit),
+            profit.to_comma_sep_string(),
+            total_profit.to_comma_sep_string(),
             tt_s,
             gph_s,
         ]);
@@ -348,10 +346,10 @@ impl PriceHandle {
 
             let row: Vec<String> = vec![
                 item.name.clone(),
-                number_to_comma_sep_string(&(amount as i32)),
-                number_to_comma_sep_string(&to_buy),
-                number_to_comma_sep_string(&price),
-                number_to_comma_sep_string(&total_item_price),
+                (amount as i32).to_comma_sep_string(),
+                to_buy.to_comma_sep_string(),
+                price.to_comma_sep_string(),
+                total_item_price.to_comma_sep_string(),
             ];
 
             recipe_lookup.push(row);
@@ -361,8 +359,8 @@ impl PriceHandle {
             format!("Total ({}% margin)", self.pmargin),
             String::new(),
             String::new(),
-            number_to_comma_sep_string(&cost_pm),
-            number_to_comma_sep_string(&(cost_pm * number_pm)),
+            cost_pm.to_comma_sep_string(),
+            (number_pm * cost_pm).to_comma_sep_string(),
         ]);
 
         recipe_lookup.push(Vec::new());
@@ -376,10 +374,10 @@ impl PriceHandle {
 
             let row: Vec<String> = vec![
                 item.name.clone(),
-                number_to_comma_sep_string(&(amount as i32)),
-                number_to_comma_sep_string(&to_buy),
-                number_to_comma_sep_string(&price),
-                number_to_comma_sep_string(&total_item_price),
+                (amount as i32).to_comma_sep_string(),
+                to_buy.to_comma_sep_string(),
+                price.to_comma_sep_string(),
+                total_item_price.to_comma_sep_string(),
             ];
 
             recipe_lookup.push(row);
@@ -389,18 +387,18 @@ impl PriceHandle {
             format!("Total (w/Tax {}% margin)", self.pmargin),
             String::new(),
             String::new(),
-            number_to_comma_sep_string(&revenue_taxed_pm),
-            number_to_comma_sep_string(&(revenue_taxed_pm * number)),
+            revenue_taxed_pm.to_comma_sep_string(),
+            (number_pm * revenue_taxed_pm).to_comma_sep_string(),
         ]);
 
         recipe_lookup.push(Vec::new());
 
         recipe_lookup.push(vec![
             format!("Profit/Loss (w/Tax {}% margin)", self.pmargin),
-            number_to_comma_sep_string(&number_pm),
+            number_pm.to_comma_sep_string(),
             String::new(),
-            number_to_comma_sep_string(&profit_pm),
-            number_to_comma_sep_string(&total_profit_pm),
+            profit_pm.to_comma_sep_string(),
+            total_profit_pm.to_comma_sep_string(),
             tt_pm_s,
             gph_pm_s,
         ]);

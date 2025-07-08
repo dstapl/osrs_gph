@@ -1,5 +1,7 @@
 use std::{collections::HashMap, fs::File};
 
+use enum_map::{enum_map, Enum, EnumMap};
+
 //use serde::de::Deserialize;
 use serde::Deserialize;
 
@@ -88,13 +90,25 @@ pub enum Membership {
     BOTH,
 }
 
+/// TODO: Enum name and serde renames
+#[derive(Enum, Deserialize, Debug)]
+pub enum OverviewFilter {
+    #[serde(rename = "must_profit")]
+    MustProfit,
+    #[serde(rename = "show_hidden")]
+    ShowHidden,
+    #[serde(rename = "reverse")]
+    Reverse,
+}
+
 #[derive(Deserialize, Debug)]
 pub struct Display {
     pub number: u32,
     pub lookup: LookupOptions,
-    pub must_profit: bool,
-    pub show_hidden: bool,
-    pub reverse: bool,
+    // pub must_profit: bool,
+    // pub show_hidden: bool,
+    // pub reverse: bool,
+    pub filters: EnumMap<OverviewFilter, bool>,
     pub membership: Membership,
 }
 
@@ -223,9 +237,14 @@ impl Default for Display {
         Self {
             number: 0,
             lookup: LookupOptions::default(),
-            must_profit: true,
-            show_hidden: false,
-            reverse: true,
+            // must_profit: true,
+            // show_hidden: false,
+            // reverse: true,
+            filters: enum_map! {
+                OverviewFilter::MustProfit => true,
+                OverviewFilter::ShowHidden => false,
+                OverviewFilter::Reverse => true,
+            },
             membership: Membership::default(),
         }
     }

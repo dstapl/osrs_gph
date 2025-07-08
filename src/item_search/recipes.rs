@@ -3,7 +3,7 @@ use serde::{de::Visitor, Deserialize};
 
 use crate::{
     file_io::{FileIO, FileOptions},
-    log_match_panic, types::OverviewRow,
+    log_match_panic,
 };
 use tracing::{debug, trace, warn};
 
