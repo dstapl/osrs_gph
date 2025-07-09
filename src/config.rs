@@ -70,6 +70,7 @@ pub struct Profit {
     #[serde(deserialize_with = "deserialize_underscored_integer")]
     pub coins: i32,
     pub percent_margin: f32,
+    #[serde(rename = "custom_weights")]
     pub weights: Weights,
     pub ignore_items: Vec<String>,
 }
@@ -90,6 +91,16 @@ pub enum Membership {
     BOTH,
 }
 
+#[derive(Deserialize, Clone, Copy, Debug)]
+#[serde(rename_all = "lowercase")]
+pub enum OverviewSortBy {
+    Name,
+    Profit,
+    Time,
+    GPH,
+    Custom,
+}
+
 /// TODO: Enum name and serde renames
 #[derive(Enum, Deserialize, Debug)]
 pub enum OverviewFilter {
@@ -105,9 +116,7 @@ pub enum OverviewFilter {
 pub struct Display {
     pub number: u32,
     pub lookup: LookupOptions,
-    // pub must_profit: bool,
-    // pub show_hidden: bool,
-    // pub reverse: bool,
+    pub sort_by: OverviewSortBy,
     pub filters: EnumMap<OverviewFilter, bool>,
     pub membership: Membership,
 }
@@ -237,9 +246,7 @@ impl Default for Display {
         Self {
             number: 0,
             lookup: LookupOptions::default(),
-            // must_profit: true,
-            // show_hidden: false,
-            // reverse: true,
+            sort_by: OverviewSortBy::GPH,
             filters: enum_map! {
                 OverviewFilter::MustProfit => true,
                 OverviewFilter::ShowHidden => false,

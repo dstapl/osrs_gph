@@ -28,7 +28,9 @@ profit:
   # Underscores are removed from strings
   coins: 876_000
   percent_margin: 2.5
-  weights:
+
+  custom_weights: # Only if `custom` is selected in display.sort_by
+    # TODO: Rename to profit?
     margin: 1.e-2
     time: -2.0
     gph: 1.e-5
@@ -46,18 +48,19 @@ display:
   lookup: # For recipe_lookup.md
     # Number of entries from optimal_overview to lookup in recipe_lookup
     # (0 == None / Disabled)
-    top: 0
+    top: 1
     # Specific entries which might not be in the top bracket
     specific:
       - Smelting Steel Bars
-      - Smelting Mithril Bars
-      - Smelting Adamantite Bars
+
+  # name, profit, time, gph, custom
+  sort_by: custom
 
   # Filtering results (Backend)
   filters:
     must_profit: true
     show_hidden: false
-    reverse: true
+    reverse: false
 
   # Only show results from: f2p, p2p, both
   membership: f2p

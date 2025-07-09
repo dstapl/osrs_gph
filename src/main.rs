@@ -92,7 +92,8 @@ fn main() {
     );
 
     trace!(desc = "Creating all recipe overview");
-    let optimal_overview = price_handle.all_recipe_overview(&weights, &conf.display);
+    let sort_by = conf.display.sort_by;
+    let optimal_overview = price_handle.all_recipe_overview(&sort_by, &weights, &conf.display);
     assert!(!optimal_overview.is_empty());
 
     trace!(desc = "Changing file path to optimal overview results file");
