@@ -1,11 +1,11 @@
 use crate::{
     config::{Membership, OverviewFilter},
-    helpers::{f_round, floor},
+    helpers::f_round,
     item_search::{
         item_search::{Item, ItemSearch},
         recipes::{Recipe, RecipeBook, RecipeTime},
     },
-    types::OverviewRow,
+    types::{DetailedTable, OverviewRow},
 };
 
 use std::collections::HashMap;
@@ -13,8 +13,6 @@ use std::collections::HashMap;
 use super::pareto_sort::custom_types::{optimal_sort, Weights};
 
 use tracing::{debug, warn};
-
-use crate::helpers::ToCommaString;
 
 // TODO: CHANGE TO ACTUAL TYPES
 pub type Row = (i32, i32, i32, RecipeTime);
@@ -68,17 +66,18 @@ impl PriceHandle {
         let all_recipe_prices = recipe_list
             .keys()
             .filter_map(|recipe_name| {
-                let overview = self.recipe_price_overview_from_string(recipe_name)?;
-                Some((recipe_name, overview))
+                let overview_output = self.recipe_price_overview_from_string(recipe_name)?;
+                Some((recipe_name, overview_output))
             })
             .collect::<HashMap<_, _>>();
+
         assert!(!all_recipe_prices.is_empty());
 
         // Construct details
-        let mut all_recipe_details = Vec::new();
+        let mut all_overviews = Vec::new();
         let coins = self.coins;
 
-        for (recipe_name, overview) in all_recipe_prices {
+        for (recipe_name, (mut overview, (cost, _revenue))) in all_recipe_prices {
             let needs_members = recipe_list[recipe_name].members;
 
             let skip = match membership_option {
@@ -97,25 +96,11 @@ impl PriceHandle {
                 continue;
             }
 
-            if !overview.3.isvalid() {
-                warn!(desc = "INVALID RecipeTime", name = %recipe_name);
-                continue;
-            }
-
-            let crate::item_search::recipes::RecipeTime::Time(time) = overview.3 else {
-                unreachable!("INVALID RecipeTime should already be checked");
-            };
-
-            #[allow(clippy::cast_precision_loss)]
-            // Times and GP/H will be low in comparison to max values
-            let [recipe_cost_f, margin_f, time] =
-                [overview.0 as f32, overview.2 as f32, time * SECOND_PER_TICK];
-
-            let margin = floor(f64::from(margin_f));
-            let recipe_cost = floor(f64::from(recipe_cost_f));
+            let profit = overview.profit;
+            let recipe_cost = cost;
 
             let cant_afford = coins < recipe_cost;
-            let no_profit = margin <= 0;
+            let no_profit = profit <= 0;
 
             // TODO: Assign some boolean values to variables so reused?
             // Or leave to the compiler instead?
@@ -126,38 +111,22 @@ impl PriceHandle {
                 continue;
             }
 
-            let row: OverviewRow = {
-                let amount = floor(f64::from(coins) / f64::from(recipe_cost));
+            // Add modifier to show not profiting
+            if (cant_afford && show_hidden) || (no_profit && profiting && show_hidden) {
+                // TODO: Better differentiate this
+                // Add modifier to the recipe name ?
+                // Change colour?
+                overview.name += " *";
+            }
 
-                // let (total_time_h, gp_h) = PriceHandle::recipe_time_h(time, amount, margin, false);
-
-                let mut name = recipe_name.to_owned();
-
-                if (cant_afford && show_hidden) || (no_profit && profiting && show_hidden) {
-                    // TODO: Better differentiate this
-                    // Add modifier to the recipe name ?
-                    name += " *";
-                }
-
-                OverviewRow {
-                    name,
-                    profit: margin,
-                    time_sec: time,
-                    number: amount,
-                }
-            };
-
-            all_recipe_details.push(row);
+            all_overviews.push(overview);
         }
 
-        // // TODO: Does this actually modify?
-        optimal_sort(&all_recipe_details, sort_by_weights, reverse)
+        // TODO: Does this actually change the order of the rows?
+        optimal_sort(&all_overviews, sort_by_weights, reverse)
     }
 
-    pub fn recipe_lookup_from_recipe(&self, recipe: &Recipe) -> Option<Vec<Vec<String>>> {
-        // TODO: Change types to Row/Table?
-        let mut recipe_lookup: Vec<Vec<String>> = Vec::new();
-
+    pub fn recipe_lookup_from_recipe(&self, recipe: &Recipe) -> Option<DetailedTable> {
         // Need to parse item strings into Item objects
         let input_items = self.parse_item_list(&recipe.inputs)?;
         let output_items = self.parse_item_list(&recipe.outputs)?;
@@ -167,252 +136,36 @@ impl PriceHandle {
         let input_details = PriceHandle::item_list_prices_unchecked(input_items, true);
         let output_details = PriceHandle::item_list_prices_unchecked(output_items, false);
 
-        // Base price
-        let cost = PriceHandle::total_details_price(
-            &input_details.clone().into_values().collect::<Vec<_>>(),
-        );
-        let revenue_untaxed = PriceHandle::total_details_price(
-            &output_details.clone().into_values().collect::<Vec<_>>(),
-        );
-        let revenue_taxed = PriceHandle::apply_tax(revenue_untaxed);
-
-        #[allow(clippy::cast_precision_loss, clippy::cast_possible_truncation)]
-        // Adjust prices according to price_margin
-        // Increase buy price, descrease sell price
-        // Note plus and minus symbols differ
-        let input_details_pm = input_details
-            .clone()
-            .into_iter()
-            .map(|(item, (price, quantity))| {
-                let adj_price = ((price as f32) * (1. + self.pmargin / 100.)).floor();
-                (item, (adj_price as i32, quantity))
-            })
-            .collect::<HashMap<Item, (i32, f32)>>();
-
-        #[allow(clippy::cast_precision_loss, clippy::cast_possible_truncation)]
-        let output_details_pm = output_details
-            .clone()
-            .into_iter()
-            .map(|(item, (price, quantity))| {
-                let adj_price = ((price as f32) * (1. - self.pmargin / 100.)).floor();
-                (item, (adj_price as i32, quantity))
-            })
-            .collect::<HashMap<Item, (i32, f32)>>();
-
-        let profit = revenue_taxed - cost;
-
-        // Percent margin adjusted
-        let cost_pm = PriceHandle::total_details_price(
-            &input_details_pm.clone().into_values().collect::<Vec<_>>(),
-        );
-        let revenue_untaxed_pm = PriceHandle::total_details_price(
-            &output_details_pm.clone().into_values().collect::<Vec<_>>(),
-        );
-        let revenue_taxed_pm = PriceHandle::apply_tax(revenue_untaxed_pm);
-
-        let profit_pm = revenue_taxed_pm - cost_pm;
-
-        // Calculate number of recipes that can be made
-        let number: i32 = self.coins / cost;
-        let number_pm: i32 = self.coins / cost_pm;
-
-        // Calculate total potential profit margin if all money is used
-        let total_profit: i32 = profit * number;
-        let total_profit_pm: i32 = profit_pm * number_pm;
-
-        let time = recipe.ticks.clone();
-
-        // Already have recipe time so can skip lookup
-        // First variable is time string for single recipe
-        let (_, (tt_s, gph_s), (tt_pm_s, gph_pm_s)) = match time {
-            RecipeTime::INVALID => (
-                String::new(),
-                (String::new(), String::new()),
-                (String::new(), String::new()),
-            ),
-            RecipeTime::Time(recipe_time) => {
-                let recipe_time = recipe_time * SECOND_PER_TICK;
-
-                // Regular and profit margin adjusted times & gph
-                let norm = PriceHandle::recipe_time_h(recipe_time, number, total_profit, true);
-                let pm = PriceHandle::recipe_time_h(recipe_time, number_pm, total_profit_pm, true);
-
-                (
-                    recipe_time.to_string(),
-                    (norm.0.to_string(), norm.1.to_comma_sep_string()),
-                    (pm.0.to_string(), pm.1.to_comma_sep_string()),
-                )
-            }
-        };
+        let (overview, (_,_)) = self.recipe_price_overview_from_recipe(recipe)?;
 
         // Form table
+        // Transform input/outputs to DetailedTable type
+        // TODO: Switch DetailedTable input/outputs types to HashMap instead
+        let input_vec = input_details.into_iter()
+            .map(|(item, (price, quantity))| (item.name,price,quantity))
+            .collect();
+        let output_vec = output_details.into_iter()
+            .map(|(item, (price, quantity))| (item.name,price,quantity))
+            .collect();
 
-        // Header row
-        recipe_lookup.insert(
-            0,
-            vec![
-                "Item".to_owned(),
-                "Amount".to_owned(),
-                "To Buy".to_owned(),
-                "Price".to_owned(),
-                "Total Price".to_owned(),
-                "Total Time (h)".to_owned(),
-                "Profit/Recipe Time (GP/h)".to_owned(),
-            ],
+        let recipe_lookup: DetailedTable = DetailedTable::new(
+            overview,
+            input_vec,
+            output_vec,
+            self.pmargin,
         );
-
-        recipe_lookup.push(vec!["Inputs (Base)".to_owned()]);
-
-        // Iterate through items and add rows
-        // item_details is in the form [item -> (price, quantity (amount for single recipe)]
-        // Can multiply by number to get (to buy) and (total price) for each item
-        #[allow(clippy::cast_precision_loss, clippy::cast_possible_truncation)]
-        for (item, (price, amount)) in input_details {
-            let to_buy: i32 = (amount * (number as f32)).floor() as i32;
-            let total_item_price = price * number;
-
-            let row: Vec<String> = vec![
-                item.name.clone(),
-                (amount as i32).to_comma_sep_string(),
-                to_buy.to_comma_sep_string(),
-                price.to_comma_sep_string(),
-                total_item_price.to_comma_sep_string(),
-            ];
-
-            recipe_lookup.push(row);
-        }
-
-        recipe_lookup.push(vec![
-            "Total (Base)".to_owned(),
-            String::new(),
-            String::new(),
-            cost.to_comma_sep_string(),
-            (number * cost).to_comma_sep_string(),
-        ]);
-
-        recipe_lookup.push(Vec::new()); // Empty row
-
-        recipe_lookup.push(vec!["Outputs (Base)".to_owned()]);
-
-        #[allow(clippy::cast_precision_loss, clippy::cast_possible_truncation)]
-        for (item, (price, amount)) in output_details {
-            let to_buy: i32 = (amount * (number as f32)).floor() as i32;
-            let total_item_price = price * number;
-
-            let row: Vec<String> = vec![
-                item.name.clone(),
-                (amount as i32).to_comma_sep_string(),
-                to_buy.to_comma_sep_string(),
-                price.to_comma_sep_string(),
-                total_item_price.to_comma_sep_string(),
-            ];
-
-            recipe_lookup.push(row);
-        }
-
-        recipe_lookup.push(vec![
-            "Total (w/Tax Base)".to_owned(),
-            String::new(),
-            String::new(),
-            revenue_taxed.to_comma_sep_string(),
-            (number * revenue_taxed).to_comma_sep_string(),
-        ]);
-
-        recipe_lookup.push(Vec::new());
-
-        recipe_lookup.push(vec![
-            "Profit/Loss (w/Tax Base)".to_owned(),
-            number.to_comma_sep_string(),
-            String::new(),
-            profit.to_comma_sep_string(),
-            total_profit.to_comma_sep_string(),
-            tt_s,
-            gph_s,
-        ]);
-
-        recipe_lookup.push(Vec::new());
-        recipe_lookup.push(Vec::new());
-
-        // Now repeat with percent margin values
-        recipe_lookup.push(vec![
-            // &"Inputs (2.50% margin)",
-            format!("Inputs ({}% margin)", self.pmargin),
-        ]);
-
-        #[allow(clippy::cast_precision_loss, clippy::cast_possible_truncation)]
-        for (item, (price, amount)) in input_details_pm {
-            let to_buy: i32 = (amount * (number_pm as f32)).floor() as i32;
-            let total_item_price = price * number_pm;
-
-            let row: Vec<String> = vec![
-                item.name.clone(),
-                (amount as i32).to_comma_sep_string(),
-                to_buy.to_comma_sep_string(),
-                price.to_comma_sep_string(),
-                total_item_price.to_comma_sep_string(),
-            ];
-
-            recipe_lookup.push(row);
-        }
-
-        recipe_lookup.push(vec![
-            format!("Total ({}% margin)", self.pmargin),
-            String::new(),
-            String::new(),
-            cost_pm.to_comma_sep_string(),
-            (number_pm * cost_pm).to_comma_sep_string(),
-        ]);
-
-        recipe_lookup.push(Vec::new());
-
-        recipe_lookup.push(vec![format!("Outputs ({}% margin)", self.pmargin)]);
-
-        #[allow(clippy::cast_precision_loss, clippy::cast_possible_truncation)]
-        for (item, (price, amount)) in output_details_pm {
-            let to_buy: i32 = (amount * (number_pm as f32)).floor() as i32;
-            let total_item_price = price * number_pm;
-
-            let row: Vec<String> = vec![
-                item.name.clone(),
-                (amount as i32).to_comma_sep_string(),
-                to_buy.to_comma_sep_string(),
-                price.to_comma_sep_string(),
-                total_item_price.to_comma_sep_string(),
-            ];
-
-            recipe_lookup.push(row);
-        }
-
-        recipe_lookup.push(vec![
-            format!("Total (w/Tax {}% margin)", self.pmargin),
-            String::new(),
-            String::new(),
-            revenue_taxed_pm.to_comma_sep_string(),
-            (number_pm * revenue_taxed_pm).to_comma_sep_string(),
-        ]);
-
-        recipe_lookup.push(Vec::new());
-
-        recipe_lookup.push(vec![
-            format!("Profit/Loss (w/Tax {}% margin)", self.pmargin),
-            number_pm.to_comma_sep_string(),
-            String::new(),
-            profit_pm.to_comma_sep_string(),
-            total_profit_pm.to_comma_sep_string(),
-            tt_pm_s,
-            gph_pm_s,
-        ]);
 
         Some(recipe_lookup)
     }
 
-    pub fn recipe_price_overview_from_string(&self, recipe_name: &String) -> Option<Row> {
+    pub fn recipe_price_overview_from_string(&self, recipe_name: &String) -> Option<(OverviewRow, (i32, i32))>  {
         let recipe = self.recipe_list.get_recipe(recipe_name)?;
         self.recipe_price_overview_from_recipe(recipe)
     }
 
+    /// Returns price overview and cost of inputs and (taxed) revenue from outputs
     #[allow(clippy::missing_panics_doc, reason = "infallible")]
-    pub fn recipe_price_overview_from_recipe(&self, recipe: &Recipe) -> Option<Row> {
+    pub fn recipe_price_overview_from_recipe(&self, recipe: &Recipe) -> Option<(OverviewRow, (i32, i32))> {
         // Need to parse item strings into Item objects
         let input_items = self.parse_item_list(&recipe.inputs)?;
         let output_items = self.parse_item_list(&recipe.outputs)?;
@@ -432,9 +185,32 @@ impl PriceHandle {
 
         let profit = revenue - cost;
 
-        let time = recipe.ticks.clone();
+        let time_ticks = recipe.ticks.clone();
+        // Return None from function if Invalid
+        let time_sec = match time_ticks {
+            RecipeTime::INVALID => None,
+            RecipeTime::Time(recipe_time) => Some(recipe_time * SECOND_PER_TICK)
+        };
 
-        Some((cost, revenue, profit, time))
+        if time_sec.is_none() {
+                warn!(desc = "INVALID RecipeTime", name = %recipe.name);
+                return None
+        }
+
+        let Some(time_sec) = time_sec else {
+                unreachable!("INVALID RecipeTime should already be checked");
+        };
+
+        let number = self.coins / cost;
+
+        let overview = OverviewRow::new(
+            recipe.name.clone(),
+            profit,
+            time_sec,
+            number
+        );
+
+        Some((overview, (cost, revenue)))
     }
 
     #[allow(clippy::cast_precision_loss)]
@@ -447,7 +223,9 @@ impl PriceHandle {
             const TAX_PERCENT: f64 = 2.0;
             const FEE_CAP: i32 = 5_000_000;
 
-            let untaxed: i32 = floor(f64::from(profit) * TAX_PERCENT / 100.0);
+            #[allow(clippy::cast_possible_truncation)]
+            // SAFETY: original values and multiplication are within i32 limit
+            let untaxed = (f64::from(profit) * TAX_PERCENT / 100.0).floor() as i32;
             let tax: i32 = FEE_CAP.min(untaxed);
 
             profit - tax
@@ -458,25 +236,11 @@ impl PriceHandle {
     pub fn total_details_price(price_details: &[(i32, f32)]) -> i32 {
         // total price for each item is price * quantity
         let total: f32 = price_details.iter().map(|t| t.0 as f32 * t.1).sum();
-        floor(f64::from(total))
-    }
 
-    // #[allow(clippy::cast_precision_loss)]
-    // /// Calculates the total recipe time, parsing invalid times
-    // pub fn recipe_time_h_option(
-    //     recipe: &Recipe,
-    //     number: i32,
-    //     margin: i32,
-    //     total_margin: bool,
-    // ) -> (Option<f32>, Option<i32>) {
-    //     if let RecipeTime::Time(t) = recipe.ticks {
-    //         let (total_time_h, gp_h) = Self::recipe_time_h(t, number,
-    //             margin, total_margin
-    //         );
-    //         return (Some(total_time_h), Some(gp_h));
-    //     }
-    //     (None, None)
-    // }
+        #[allow(clippy::cast_possible_truncation)]
+        // TODO: Max size of i32 < f32
+        return total.floor() as i32
+    }
 
     #[allow(clippy::cast_precision_loss)]
     /// Returns total time in hours, and estimated GP/hour
@@ -484,10 +248,13 @@ impl PriceHandle {
         let time_h: f32 = time / (60. * 60.);
         let total_time_h: f32 = f_round(number as f32 * time_h, 2);
 
+        // SAFETY: f64 can represent all values of i32
+        // TODO: times should not be small enough to surpass accuracy limit?
+        #[allow(clippy::cast_possible_truncation)]
         let gp_h = if total_margin {
-            floor(f64::from(margin) / f64::from(total_time_h))
+            (f64::from(margin) / f64::from(total_time_h)).floor() as i32
         } else {
-            floor(f64::from(margin) / f64::from(time_h))
+            (f64::from(margin) / f64::from(time_h)).floor() as i32
         };
 
         (total_time_h, gp_h)

@@ -1,21 +1,18 @@
 //! TODO: 2025-06-16 Something weird is happening with the log...
 //! Unless the file is manually cleared, the contents will still remain
 
-use std::{
-    collections::HashMap,
-    io::{self, Write},
-};
+use std::collections::HashMap;
 
 use osrs_gph::{
     api::Api,
     config,
     file_io::{FileIO, FileOptions},
-    helpers::{center_align, Input},
+    helpers::Input,
     item_search::recipes::RecipeBook,
     log_match_panic, log_panic,
     prices::prices::PriceHandle,
-    results_writer::markdown::OptimalOverview,
-    types::{ResultsTable, NUM_HEADERS},
+    results_writer::markdown::{DetailedRecipeLookup, OptimalOverview},
+    types::{DetailedTable, ResultsTable, DETAILED_NUM_HEADERS, OVERVIEW_NUM_HEADERS},
 };
 use tracing::{info, span, trace, warn, Level};
 
@@ -109,7 +106,8 @@ fn main() {
     );
 
     trace!(desc = "Writing overview to file");
-    let mut writer = OptimalOverview::new(optimal_overview.clone(), [0; NUM_HEADERS]);
+    // TODO: Possible to take reference to optimal_overview instead?
+    let mut writer = OptimalOverview::new(optimal_overview.clone(), [0; OVERVIEW_NUM_HEADERS]);
 
     // TODO: Optimise into reduced/buffered calls?
     // Set append mode since all rows are written in separate calls
@@ -125,7 +123,7 @@ fn main() {
 
     trace!(desc = "Creating recipe lookups");
     // Get top n from the optimal overview
-    let mut recipe_lookup_list: Vec<(String, Vec<Vec<String>>)> =
+    let mut recipe_lookup_list: Vec<DetailedTable> =
         optimal_overview
             .iter()
             // TODO: Make config load a usize not u32 for top n
@@ -138,11 +136,11 @@ fn main() {
                 let recipe_s = row.name.clone();
                 let x = price_handle.recipe_list.get_recipe(&recipe_s)?;
                 let specific_lookup = price_handle.recipe_lookup_from_recipe(x)?;
-                Some((recipe_s, specific_lookup))
+                Some(specific_lookup)
             })
             .collect();
 
-    let recipe_lookup_list_specific: Vec<_> = conf
+    let recipe_lookup_list_specific: Vec<DetailedTable> = conf
         .display
         .lookup
         .specific
@@ -151,12 +149,18 @@ fn main() {
         .filter_map(|recipe_s| {
             let x = price_handle.recipe_list.get_recipe(&recipe_s)?;
             let specific_lookup = price_handle.recipe_lookup_from_recipe(x)?;
-            Some((recipe_s, specific_lookup))
+            Some(specific_lookup)
         })
         .collect();
 
     recipe_lookup_list.extend(recipe_lookup_list_specific);
 
+    trace!(desc = "Creating DetailedRecipeLookup struct");
+    let mut writer = DetailedRecipeLookup::new(
+        conf.profit.coins,
+        recipe_lookup_list,
+        [0;DETAILED_NUM_HEADERS]
+    );
     trace!(desc = "Changing file path to recipe lookup results file");
     // Write out to file
     file.set_file_path(conf.filepaths.results.lookup.clone());
@@ -171,14 +175,12 @@ fn main() {
     file = file.set_append(true);
 
     trace!(desc = "Writing detailed recipe lookups to file");
-    for (recipe_name, recipe_lookup) in recipe_lookup_list {
-        // TODO: Error message
-        log_match_panic(
-            write_recipe_lookup(&mut file, &recipe_name, recipe_lookup),
-            &format!("Wrote recipe lookup for {recipe_name}"),
-            &format!("Failed to write recipe lookup for {recipe_name}"),
-        );
-    }
+
+    log_match_panic(
+        writer.write_all_tables(&mut file),
+        "Wrote all recipe lookups to file",
+        "Failed to write all recipe tables",
+    )
 }
 
 fn request_new_prices_from_api(api_settings: &config::Api, file: &mut FileIO) {
@@ -195,156 +197,4 @@ fn request_new_prices_from_api(api_settings: &config::Api, file: &mut FileIO) {
         "Write success.",
         "Failed to write to file.",
     );
-}
-
-// // TODO: Takes in a nested iterator
-// #[instrument(level = "trace", skip(file, data))]
-// fn write_markdown(file: &mut FileIO, data: &osrs_gph::prices::prices::Table) -> io::Result<()> {
-//     // Open the underlying file handle
-//     let mut file = file.open_file().expect("Failed to access inner file");
-//
-//     let num_cols = ROW_HEADERS.len();
-//
-//     // Collect headers and rows into one iterable to calculate widths
-//     let mut col_widths = vec![0; num_cols];
-//
-//     // Check headers lengths
-//     for (i, header) in ROW_HEADERS.iter().enumerate() {
-//         col_widths[i] = col_widths[i].max(header.len());
-//     }
-//
-//     // Check all data rows lengths
-//     for row in data {
-//         for (i, cell) in row.iter().enumerate() {
-//             col_widths[i] = col_widths[i].max(cell.len());
-//         }
-//     }
-//
-//     // Format a row with custom alignment rules
-//     fn format_row(row: &[String], col_widths: &[usize]) -> String {
-//         let num_cols = col_widths.len();
-//
-//         let cells = row.iter().enumerate().map(|(i, cell)| {
-//             let width = col_widths[i];
-//             if i == 0 {
-//                 // Left align first two columns
-//                 format!("{cell:<width$}")
-//             } else if i >= num_cols - 2 {
-//                 // Center align last two columns
-//                 center_align(cell, width)
-//             } else {
-//                 // Right align others
-//                 format!("{cell:>width$}")
-//             }
-//         });
-//
-//         format!("| {} |", cells.collect::<Vec<_>>().join(" | "))
-//     }
-//
-//     // Write header row
-//     let header_row: Vec<String> = ROW_HEADERS.iter().map(|&s| s.to_string()).collect();
-//     writeln!(file, "{}", format_row(&header_row, &col_widths))?;
-//
-//     // Write separator row
-//     let separator_cells = col_widths.iter().map(|w| "-".repeat(*w.max(&3)));
-//     writeln!(
-//         file,
-//         "| {} |",
-//         separator_cells.collect::<Vec<_>>().join(" | ")
-//     )?;
-//
-//     // Write data rows
-//     for row in data {
-//         writeln!(file, "{}", format_row(row, &col_widths))?;
-//     }
-//
-//     Ok(())
-// }
-
-fn write_recipe_lookup(
-    writer: &mut FileIO,
-    recipe_name: &str,
-    recipe_lookup: Vec<Vec<String>>,
-) -> io::Result<()> {
-    // Title
-    writeln!(writer, "{recipe_name}\n")?;
-
-    // Table
-    let (rlstr, max_line_length) = markdown_table(recipe_lookup);
-
-    write!(writer, "{rlstr}")?; // Already has newline
-
-    // Buffer line
-    write!(writer, "\n{}\n\n", "#".repeat(max_line_length))?;
-
-    Ok(())
-}
-
-// Returns table as a string, and maximum line length
-fn markdown_table(rows: Vec<Vec<String>>) -> (String, usize) {
-    if rows.is_empty() {
-        return (String::new(), 0);
-    }
-
-    let num_cols = rows.iter().map(std::vec::Vec::len).max().unwrap_or(0);
-
-    let padded_rows: Vec<Vec<String>> = rows
-        .into_iter()
-        .map(|mut row| {
-            row.resize(num_cols, String::new());
-            row
-        })
-        .collect();
-
-    let mut col_widths = vec![0; num_cols];
-    for row in &padded_rows {
-        for (i, cell) in row.iter().enumerate() {
-            col_widths[i] = col_widths[i].max(cell.len());
-        }
-    }
-
-    let mut output = String::new();
-    let mut max_len = 0;
-
-    for (i, row) in padded_rows.iter().enumerate() {
-        let line = row
-            .iter()
-            .enumerate()
-            .map(|(col_idx, cell)| {
-                let width = col_widths[col_idx];
-                if col_idx < 2 {
-                    // Left align first two cols
-                    format!("{cell:<width$}")
-                } else if col_idx >= num_cols - 2 {
-                    // Center align last two cols
-                    center_align(cell, width)
-                } else {
-                    // Right align others
-                    format!("{cell:>width$}")
-                }
-            })
-            .collect::<Vec<_>>()
-            .join(" | ");
-
-        // Update max line length
-        let full_line = format!("| {line} |");
-        max_len = max_len.max(full_line.len());
-
-        output.push_str(&full_line);
-        output.push('\n');
-
-        if i == 0 {
-            let separator = col_widths
-                .iter()
-                .map(|w| "-".repeat(*w.max(&3)))
-                .collect::<Vec<_>>()
-                .join(" | ");
-            let sep_line = format!("| {separator} |");
-            max_len = max_len.max(sep_line.len());
-            output.push_str(&sep_line);
-            output.push('\n');
-        }
-    }
-
-    (output, max_len)
 }

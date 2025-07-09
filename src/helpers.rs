@@ -34,6 +34,18 @@ impl<T: num_format::ToFormattedStr> ToCommaString for T {
     }
 }
 
+// impl ToCommaString for &f32 {
+//     fn to_comma_sep_string(self) -> String {
+//         let quantity_string: String = (*self as i32).to_comma_sep_string();
+//         let quantity_is_int: bool = quantity_string.parse::<f32>().expect("Error converting int_quantity back to f32") == self;
+//         if !quantity_is_int {
+//             let quantity_string = format!("{self:.1}"); // Float
+//         };
+//
+//         quantity_string
+//     }
+// }
+
 pub trait Input {
     /// User input convenience function
     fn input<S: AsRef<str> + Display>(&self, message: S) -> String {
