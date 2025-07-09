@@ -1,9 +1,12 @@
 # General
 - [ ] **Revise i32, f32, f64 types** when multiplying; i32::MAX << f32::MAX
     - [ ] Turn this into a function? 
-        .map(|(_,price,quantity)| (f64::from(*price) * f64::from(*quantity)) as i32).sum::<i32>();
+        .map(|(_,price,quantity)| (f64::from(*price) * f64::from(*quantity)) as i32).sum::<i32>()
+
 - [ ] Separate the front & back-end
 - [ ] Change markdown output to a legacy feature
+- [ ] Implement a rigorous sorting function for `custom` option in
+  OverviewSortBy
 
 # Web migration
 - [ ] Create html/css(/js?) mockup

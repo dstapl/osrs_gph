@@ -124,10 +124,10 @@ pub mod custom_types {
     }
 
     pub fn optimal_sort(
-        table: &[OverviewRow],
+        table: &mut Vec<OverviewRow>,
         weights: &Weights,
         reverse: bool,
-    ) -> Vec<OverviewRow> {
+    ) {
         // let norm_weights = normalize_weights(weights); // Normalize
         // Return sorted based on ls_compare function
         // let norm_weights = *weights;
@@ -146,7 +146,8 @@ pub mod custom_types {
         for row in row_list {
             output_table.push(row.clone());
         }
-        output_table
+
+        *table = output_table;
     }
 
     // TODO: What is the reasoning for this?

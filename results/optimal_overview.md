@@ -1,16 +1,15 @@
-| Method                   | Loss/Gain | (Total) Loss/Gain | Time (Hours) |    GP/h |
-| ------------------------ | --------- | ----------------- | ------------ | ------- |
-| Ruby Necklaces           |       218 |           209,934 |         0.48 | 435,999 |
-| Diamond Necklaces        |       138 |            67,344 |         0.24 | 276,000 |
-| Ruby Amulets             |       158 |           152,154 |         0.48 | 316,000 |
-| Diamond Rings            |       109 |            53,192 |         0.24 | 217,999 |
-| Emerald Necklaces        |       157 |           259,835 |         0.83 | 314,000 |
-| Ruby Rings               |       111 |           106,893 |         0.48 | 221,999 |
-| Emerald Amulets          |       143 |           236,665 |         0.83 | 286,000 |
-| Diamond Amulets          |        72 |            35,136 |         0.24 | 144,000 |
-| Emerald Rings            |       123 |           203,565 |         0.83 | 245,999 |
-| Smelting Adamantite Bars |        74 |             8,880 |         0.32 |  27,749 |
-| Sapphire Necklaces       |        75 |           164,250 |          1.1 | 150,000 |
-| Sapphire Rings           |        72 |           157,680 |          1.1 | 144,000 |
-| Smelting Mithril Bars    |       219 |            47,304 |         0.72 |  65,700 |
-| Smelting Steel Bars      |       604 |           124,424 |         1.24 | 100,666 |
+| Method                | Loss/Gain | (Total) Loss/Gain | Time (Hours) |    GP/h |
+| --------------------- | --------- | ----------------- | ------------ | ------- |
+| Ruby Necklaces        |       169 |           163,423 |         0.48 | 338,000 |
+| Ruby Amulets          |       162 |           156,654 |         0.48 | 324,000 |
+| Ruby Rings            |       134 |           129,578 |         0.48 | 268,000 |
+| Diamond Amulets       |       101 |            48,076 |         0.24 | 201,999 |
+| Diamond Necklaces     |       100 |            47,600 |         0.24 | 199,999 |
+| Emerald Necklaces     |       145 |           240,555 |         0.83 | 290,000 |
+| Emerald Amulets       |       144 |           238,896 |         0.83 | 288,000 |
+| Diamond Rings         |        62 |            29,512 |         0.24 | 123,999 |
+| Emerald Rings         |       119 |           197,421 |         0.83 | 237,999 |
+| Sapphire Rings        |       100 |           226,900 |         1.13 | 199,999 |
+| Sapphire Necklaces    |        85 |           192,865 |         1.13 | 170,000 |
+| Smelting Mithril Bars |        75 |            15,900 |         0.71 |  22,500 |
+| Smelting Steel Bars   |       629 |           128,316 |         1.22 | 104,833 |

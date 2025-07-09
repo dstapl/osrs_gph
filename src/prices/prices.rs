@@ -1,11 +1,11 @@
 use crate::{
-    config::{Membership, OverviewFilter},
+    config::{Membership, OverviewFilter, OverviewSortBy},
     helpers::f_round,
     item_search::{
         item_search::{Item, ItemSearch},
         recipes::{Recipe, RecipeBook, RecipeTime},
     },
-    types::{DetailedTable, OverviewRow},
+    types::{DetailedTable, OverviewRow, SEC_IN_HOUR},
 };
 
 use std::collections::HashMap;
@@ -50,10 +50,10 @@ impl PriceHandle {
     /// Refer to `filepaths/lookup_data/recipes` in [`config.yaml`]
     pub fn all_recipe_overview(
         &self,
+        sort_by_option: &OverviewSortBy,
         sort_by_weights: &Weights,
         price_options: &crate::config::Display,
     ) -> Vec<OverviewRow> {
-        // let [profiting, show_hidden, reverse] = price_options;
         let profiting = price_options.filters[OverviewFilter::MustProfit];
         let show_hidden = price_options.filters[OverviewFilter::ShowHidden];
         let reverse = price_options.filters[OverviewFilter::Reverse];
@@ -122,8 +122,41 @@ impl PriceHandle {
             all_overviews.push(overview);
         }
 
-        // TODO: Does this actually change the order of the rows?
-        optimal_sort(&all_overviews, sort_by_weights, reverse)
+
+        // Sort based on option selected in config
+        match sort_by_option {
+            // TODO: Way other than clone? Even though strings are short-ish
+            OverviewSortBy::Name => {
+                all_overviews.sort_by_key(|k| k.name.clone());
+                if reverse {
+                    all_overviews.reverse();
+                };
+            },
+            // TODO: Are these the same order as total times / total profit?
+            OverviewSortBy::Profit => {
+                all_overviews.sort_by_key(|k| k.total_gp());
+                if !reverse { // Highest profit first
+                    all_overviews.reverse();
+                };
+            },
+            OverviewSortBy::Time => {
+                all_overviews.sort_by_key(|k| (k.total_time() * SEC_IN_HOUR as f32) as i32);
+                if reverse {
+                    all_overviews.reverse();
+                };
+            },
+            OverviewSortBy::GPH => {
+                all_overviews.sort_by_key(|k| k.gph());
+
+                if !reverse { // Highest GP/h first
+                    all_overviews.reverse();
+                }
+            },
+            // TODO: Does this actually change the order of the rows?
+            OverviewSortBy::Custom => optimal_sort(&mut all_overviews, sort_by_weights, !reverse),
+        }
+
+        all_overviews
     }
 
     pub fn recipe_lookup_from_recipe(&self, recipe: &Recipe) -> Option<DetailedTable> {
