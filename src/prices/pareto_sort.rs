@@ -17,7 +17,6 @@ type Weights = [f32; 4];
 //                 let cont = c.get_content();
 //                 if cont.contains(',') {
 //                     let p = parse_comma_string(&cont);
-//                     // dbg!(&p);
 //                     p.ok().map(|a| a as f32)
 //                 } else {
 //                     cont.parse::<f32>().ok()
@@ -25,7 +24,6 @@ type Weights = [f32; 4];
 //                 }
 //             })
 //             .collect_vec();
-//         // dbg!(&parsed);
 //         if parsed.len() == 4 {
 //             Some(
 //                 parsed.iter().zip(weights.iter())
@@ -44,7 +42,6 @@ type Weights = [f32; 4];
 //         let Some(y_val) = lin_scalarization(y, weights)
 //             else { return Ordering::Greater };
 //
-//         // dbg!(( (x_val, y_val) ));
 //         // (x_val > y_val) - (x_val < y_val)
 //         // Want x_val > y_val (Opposite of x_val < y_val)
 //         x_val.total_cmp(&y_val)
@@ -121,7 +118,6 @@ pub mod custom_types {
         let x_val = lin_scalarization(x, weights);
         let y_val = lin_scalarization(y, weights);
 
-        // dbg!(( (x_val, y_val) ));
         // (x_val > y_val) - (x_val < y_val)
         // Want x_val > y_val (Opposite of x_val < y_val)
         x_val.total_cmp(&y_val)
