@@ -1,7 +1,9 @@
 /target
-/src/bin/wiki_info/*.html
+src/target
+src/bin/wiki_info/*.html
 *.log
 
 *.svg*
 *.bat*
 !flamegraph.bat
+!clippy.bat

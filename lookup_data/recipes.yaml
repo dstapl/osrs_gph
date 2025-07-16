@@ -397,3 +397,14 @@ Smelting Mithril Bars:
   outputs:
     Mithril bar: 5
   time: 20
+Killing Urium Shades:
+  name: "Killing Urium Shades"
+  members: true
+  inputs:
+    Divine super combat potion(4): 4
+    Prayer potion(4): 4
+  # Based on kills/hour
+  outputs:
+    Urium remains: 140
+  # 1 / (kills/hour) in seconds
+  time: 6000

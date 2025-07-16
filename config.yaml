@@ -26,8 +26,8 @@ filepaths:
 
 profit:
   # Underscores are removed from strings
-  coins: 876_000
-  percent_margin: 2.5
+  coins: 1_550_000
+  percent_margin: 1.5 # buy +%, sell -% -> overall diff 2*%
 
   custom_weights: # Only if `custom` is selected in display.sort_by
     # TODO: Rename to profit?
@@ -51,19 +51,20 @@ display:
     top: 1
     # Specific entries which might not be in the top bracket
     specific:
-      - Smelting Steel Bars
+      # - Smelting Steel Bars
+      - Killing Urium Shades
 
   # name, profit, time, gph, custom
   sort_by: custom
 
   # Filtering results (Backend)
   filters:
-    must_profit: true
+    must_profit: false
     show_hidden: false
     reverse: false
 
   # Only show results from: f2p, p2p, both
-  membership: f2p
+  membership: p2p
   
 
 levels:
