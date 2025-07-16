@@ -470,9 +470,18 @@ pub mod markdown {
             let input_cost_pm: i32 = DetailedTable::single_recipe_price(
                 &current_internal_table.inputs
             );
-
+            
             current_internal_table.overview.number = self.current_coins / input_cost_pm;
 
+            // Decrease profit of recipe
+            let output_cost_pm: i32 = DetailedTable::single_recipe_price(
+                &current_internal_table.outputs
+            );
+            let profit_pm: i32 = output_cost_pm - input_cost_pm;
+
+            current_internal_table.overview.profit = profit_pm;
+
+            
             Self::push_section_rows(&mut res, &section_headers[DetailedSections::PriceMargin], current_internal_table);
 
             self.current_table_rows = res;

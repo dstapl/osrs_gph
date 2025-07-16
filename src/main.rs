@@ -156,6 +156,11 @@ fn main() {
 
     recipe_lookup_list.extend(recipe_lookup_list_specific);
 
+    // Filter duplicates
+    recipe_lookup_list.sort_by_key(|e| e.overview.name.clone());
+    recipe_lookup_list.dedup_by_key(|e| e.overview.name.clone());
+
+
     trace!(desc = "Creating DetailedRecipeLookup struct");
     let mut writer = DetailedRecipeLookup::new(
         conf.profit.coins,
