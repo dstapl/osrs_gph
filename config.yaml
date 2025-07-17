@@ -12,7 +12,7 @@ filepaths:
   lookup_data:
     id_to_name: lookup_data/id_to_name.yaml
     name_to_id: lookup_data/name_to_id.yaml
-    api_mapping: lookup_data/mapping.json
+    api_mapping: lookup_data/mapping.yaml
 
     recipes: lookup_data/recipes.yaml
 
@@ -26,7 +26,7 @@ filepaths:
 
 profit:
   # Underscores are removed from strings
-  coins: 1_550_000
+  coins: 2_700_000
   percent_margin: 1.5 # buy +%, sell -% -> overall diff 2*%
 
   custom_weights: # Only if `custom` is selected in display.sort_by
@@ -48,18 +48,21 @@ display:
   lookup: # For recipe_lookup.md
     # Number of entries from optimal_overview to lookup in recipe_lookup
     # (0 == None / Disabled)
-    top: 1
+    top: 0
     # Specific entries which might not be in the top bracket
     specific:
-      # - Smelting Steel Bars
-      - Killing Urium Shades
+      - Degriming grimy avantoe
+      - Making Prayer potion(4)
+      - Making Prayer potion(3)
+      - Making Prayer regeneration potion(3)
+      - Making Prayer regeneration potion(4)
 
   # name, profit, time, gph, custom
-  sort_by: custom
+  sort_by: profit
 
   # Filtering results (Backend)
   filters:
-    must_profit: false
+    must_profit: true
     show_hidden: false
     reverse: false
 

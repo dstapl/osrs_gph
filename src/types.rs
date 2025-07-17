@@ -19,9 +19,9 @@ pub const DETAILED_NUM_HEADERS: usize = 7;
 pub const DETAILED_ROW_HEADERS: [&str; DETAILED_NUM_HEADERS] = [
     "Item",
     // TODO: Name
-    "Single Amount", // For an individual recipe
+    "(Single Recipe Quantity)", // For an individual recipe
     "At Offer Price (GP)", // Individual recipe
-    "Amount to Offer", // Multiplied by number of recipes possible given current GP
+    "Quantity to offer", // Multiplied by number of recipes possible given current GP
     "Total Price (GP)",
     "Total Time (h)",
     "Profit/Recipe Time (GP/h)"

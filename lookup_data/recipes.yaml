@@ -401,10 +401,46 @@ Killing Urium Shades:
   name: "Killing Urium Shades"
   members: true
   inputs:
-    Divine super combat potion(4): 4
-    Prayer potion(4): 4
-  # Based on kills/hour
+    Divine super combat potion(4): 2
+    Prayer potion(4): 6
+  # Based on a test kills/hour (2 trips total tele to Burgh)
   outputs:
-    Urium remains: 140
+    Urium remains: 101
   # 1 / (kills/hour) in seconds
-  time: 6000
+  time: 4400
+Making Prayer potion(3):
+  name: "Making Prayer potion(3)"
+  members: true
+  inputs:
+    Ranarr potion (unf): 1
+    Snape grass: 1
+  outputs:
+    Prayer potion(3): 1
+  time: 2
+Making Prayer potion(4):
+  name: "Making Prayer potion(4)"
+  members: true
+  inputs:
+    Ranarr potion (unf): 4
+    Snape grass: 4
+  outputs:
+    Prayer potion(4): 3
+  time: 10 # Extra time since need to convert at GE NPC
+Making Prayer regeneration potion(3):
+  name: "Making Prayer regeneration potion(3)"
+  members: true
+  inputs:
+    Huasca potion (unf): 1
+    Aldarium: 1
+  outputs:
+    Prayer regeneration potion(3): 1
+  time: 8
+Making Prayer regeneration potion(4):
+  name: "Making Prayer regeneration potion(4)"
+  members: true
+  inputs:
+    Huasca potion (unf): 4
+    Aldarium: 4
+  outputs:
+    Prayer regeneration potion(3): 3
+  time: 10 # Extra time since need to convert at GE NPC
