@@ -7,7 +7,10 @@
 - [ ] Change markdown output to a legacy feature
 - [ ] Implement a rigorous sorting function for `custom` option in
   OverviewSortBy
-
+- [ ] Allow filtering by method type (Match from Wiki)
+    - [ ] Add attribute for method type in Recipe Struct
+- [ ] Add error message for when an item name is not found on parsing
+    - [ ] Warn that lookups may need to be regenerated
 # Web migration
 - [ ] Create html/css(/js?) mockup
 - [ ] Use Leptos framework in Rust
@@ -27,3 +30,9 @@
 ## Generate Lookups
 
 ## Wiki pages
+- [ ] Auto-generate recipes from Wiki pages
+    - [ ] Parse inputs and outputs
+    - [ ] Include requirements or other? E.g. quest points
+    - [ ] Parse kills/hour into a time and number of outputs
+        -
+    - [ ] Auto-update lookup_data/recipes.yaml with parsed recipes

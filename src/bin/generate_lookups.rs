@@ -3,6 +3,7 @@ use osrs_gph::config::{self, load_config};
 use osrs_gph::file_io::{self, FileOptions, SerChoice};
 use osrs_gph::log_match_panic;
 use std::collections::HashMap;
+use std::io::Read;
 
 use tracing::{debug, span, trace, Level};
 
@@ -16,22 +17,44 @@ fn main() {
     let _crateguard = tracing::subscriber::set_default(subscriber);
     let _span = span!(LOG_LEVEL, "main").entered();
 
-    trace!("Initialised logger: {config_file_name}");
+    trace!(desc = "Initialised logger: {config_file_name}");
 
-    let id_to_name_str: String = config.filepaths.lookup_data.id_to_name;
-    let name_to_id_str: String = config.filepaths.lookup_data.name_to_id;
+    trace!(desc = "Building reqwest client");
+    // Get new mapping file
+    let client = reqwest::blocking::Client::new();
+    let user_agent: &str =
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X x.y; rv:42.0) Gecko/20100101 Firefox/42.0";
+    
+    trace!(desc = "Sending API request");
+    let mapping_text = client
+        .get(config.api.url + "/mapping")
+        .header(reqwest::header::USER_AGENT, user_agent)
+        .send().expect("Failed to send API request")
+        // TODO: Hopefully this won't get too big to fit in memory...
+        .text().expect("Failed to parse text of response");
 
+
+    // Write Response to file
     let mapping_path_str: String = config.filepaths.lookup_data.api_mapping;
 
+    trace!(desc = "Creating mapping_fio");
     let mut mapping_fio =
         file_io::FileIO::new(mapping_path_str.clone(), FileOptions::new(true, true, true));
-    trace!(desc = "Created mapping_fio");
 
-    let mapping: Vec<MappingItem> = log_match_panic(
-        mapping_fio.read_serialized(SerChoice::JSON),
+    trace!(desc = "Writing mapping to file");
+    log_match_panic(
+        mapping_fio.write_serialized(&mapping_text),
         &format!("Reading mapping file {mapping_path_str}"),
         &format!("Failed to parse mapping {mapping_path_str}"),
     );
+
+    trace!(desc = "Re-/serialising mapping into YAML");
+    let mapping: Vec<MappingItem> = serde_yaml_ng::from_str(&mapping_text).expect("Failed to serialise mapping_text into YAML");
+
+
+    // Split mapping into id_to_name and name_to_id
+    let id_to_name_str: String = config.filepaths.lookup_data.id_to_name;
+    let name_to_id_str: String = config.filepaths.lookup_data.name_to_id;
 
     let mut id_to_name = HashMap::<String, String>::with_capacity(mapping.len());
     trace!(desc = "Initialised id_to_name HashMap");
