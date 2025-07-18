@@ -444,3 +444,12 @@ Making Prayer regeneration potion(4):
   outputs:
     Prayer regeneration potion(3): 3
   time: 10 # Extra time since need to convert at GE NPC
+Making Super energy potion(3):
+  name: "Making Super energy potion(3)"
+  members: true
+  inputs:
+    Avantoe potion (unf): 1
+    Mort myre fungus: 1
+  outputs:
+    Super energy(3): 1
+  time: 2
