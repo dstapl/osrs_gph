@@ -11,6 +11,12 @@
     - [ ] Add attribute for method type in Recipe Struct
 - [ ] Add error message for when an item name is not found on parsing
     - [ ] Warn that lookups may need to be regenerated
+- [ ] Change running interface to work with CLI instead of just a prompt
+    - [ ] `cargo run` should use previous data (if exists)
+        - [ ] If data doesn't exist as a file, warn user and error/exit
+    - [ ] Add `--prompt` argument to restore original functionality
+        - [ ] Change numbering to `yes/no (or y/n)` so compatible with `yes` command. 
+
 # Web migration
 - [ ] Create html/css(/js?) mockup
 - [ ] Use Leptos framework in Rust

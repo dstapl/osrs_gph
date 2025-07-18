@@ -356,7 +356,7 @@ pub mod markdown {
                 
                 let quantity_string = if quantity_is_int {
                     (quantity as i32).to_comma_sep_string()  
-                } else { format!("{quantity:.1}") };
+                } else { format!("{quantity:.1}") }; // TODO: 1 sig. fig. instead of decimal place
 
 
                 let total_quantity = number_recipes as f32 * quantity;
@@ -364,14 +364,14 @@ pub mod markdown {
 
                 let total_quantity_string = if total_quantity_is_int {
                     (total_quantity as i32).to_comma_sep_string() 
-                } else { format!("{total_quantity:.1}") };
+                } else { format!("{total_quantity:.1}") }; // Ditto
 
 
                 let row = [
                     name.to_owned(),
                     quantity_string,
-                    price.to_comma_sep_string(),
                     total_quantity_string,
+                    price.to_comma_sep_string(),
                     ((f64::from(total_quantity)* f64::from(*price)) as i32).to_comma_sep_string(),
                     String::new(),
                     String::new(),
@@ -423,7 +423,6 @@ pub mod markdown {
             // Profit/Loss
             header = [const{String::new()};DETAILED_NUM_HEADERS];
             header[0].clone_from(&section_headers[4]);
-            // header[2] = current_internal_table.overview.profit.to_comma_sep_string();
             header[4] = current_internal_table.overview.total_gp().to_comma_sep_string();
             header[5] = current_internal_table.overview.total_time().to_string();
             header[6] = current_internal_table.overview.gph().to_comma_sep_string();
