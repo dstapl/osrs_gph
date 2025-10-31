@@ -2,7 +2,7 @@
 //! Implements traits from [`src/types.rs`]
 
 pub mod markdown {
-    use enum_map::{enum_map, Enum, EnumMap};
+    use itertools::Itertools;
     use tracing::trace;
 
     use crate::types::{DetailedTable, OverviewRow, RecipeDetail, ResultsTable, DETAILED_NUM_HEADERS, DETAILED_ROW_HEADERS, OVERVIEW_NUM_HEADERS, OVERVIEW_ROW_HEADERS};
@@ -223,6 +223,7 @@ pub mod markdown {
             writeln!(f, "| {} |", separator_cells.collect::<Vec<_>>().join(" | "))?;
 
             // TODO: Not working currently
+            //  2025-10-28: Is this still the case?
             // Print internal table body
             let unused = &DetailedTable::default();
             writeln!(f, "{}", self.fmt_item(unused))?;
@@ -286,14 +287,6 @@ pub mod markdown {
         }
     }
 
-
-    // TODO: Name
-    #[derive(Enum, Debug, Clone)]
-    enum DetailedSections {
-        Normal,
-        PriceMargin
-    }
-
     impl DetailedRecipeLookup {
         const NUM_SECTION_HEADERS: usize = 5;
         const BASE_HEADERS: [(&str, Option<&str>); Self::NUM_SECTION_HEADERS] = [
@@ -317,33 +310,24 @@ pub mod markdown {
 
 
         // TODO: Convert to [String; Self::NUM_SECTION_HEADERS instead of Vec<String>
-        fn generate_section_headers(percent_margin: f32) -> EnumMap<DetailedSections, [String; Self::NUM_SECTION_HEADERS]> {
-            let (base_section, pmargin_section): (Vec<_>, Vec<_>) = Self::BASE_HEADERS
-                                                  .iter()
-                                                  .map(|(label, extra)| {
-                                                      let prefix = extra.unwrap_or("");
-                                                      let margin_suffix = format!("{percent_margin}% margin");
-                                                      let (base, with_margin) = if prefix.is_empty() {
-                                                          (format!("{label} (Base)"),
-                                                          format!("{label} ({margin_suffix})"))
-                                                      } else {
-                                                          (format!("{label} ({prefix} Base)"),
-                                                          format!("{label} ({prefix} {margin_suffix})"))
-                                                      };
+        fn generate_section_headers(percent_margin: f32) -> [String; Self::NUM_SECTION_HEADERS] {
+            assert_eq!(Self::BASE_HEADERS.len(), Self::NUM_SECTION_HEADERS);
 
-                                                      (base, with_margin)
-                                                  })
-            .unzip();
+            let section: Vec<_> = Self::BASE_HEADERS
+                .iter()
+                .map(|(label, extra)| {
+                    let prefix = extra.unwrap_or("");
+                    let margin_suffix = format!("{percent_margin}% margin");
 
-            // Try to convert to [String;n]
-            let base_section: [String; Self::NUM_SECTION_HEADERS] = base_section.try_into().unwrap();
-            let pmargin_section: [String; Self::NUM_SECTION_HEADERS] = pmargin_section.try_into().unwrap();
+                    if prefix.is_empty() { // e.g. `w/Tax`
+                        format!("{label} (Base; {margin_suffix})")
+                    } else {
+                        format!("{label} ({prefix} Base; {margin_suffix})")
+                    }
+                }).collect();
 
-            // TODO: Better way than clone?
-            enum_map!{
-                DetailedSections::Normal => base_section.clone(),
-                DetailedSections::PriceMargin => pmargin_section.clone()
-            }
+            // SAFETY: Generating `section` will never fail, and iter length is asserted
+            unsafe { section.try_into().unwrap_unchecked() }
         }
 
 
@@ -372,7 +356,7 @@ pub mod markdown {
                     quantity_string,
                     total_quantity_string,
                     price.to_comma_sep_string(),
-                    ((f64::from(total_quantity)* f64::from(*price)) as i32).to_comma_sep_string(),
+                    ((f64::from(total_quantity) * f64::from(*price)) as i32).to_comma_sep_string(),
                     String::new(),
                     String::new(),
                 ];
@@ -430,83 +414,128 @@ pub mod markdown {
 
         }
 
+
+        // TODO: Move `push_section_rows` logic into here
+        pub fn generate_section_rows(
+            headers: &[String; Self::NUM_SECTION_HEADERS],
+            table: &mut DetailedTable,
+            // apply_margin: bool,
+        ) -> Vec<[String; DETAILED_NUM_HEADERS]> {
+            let mut rows = Vec::new();
+            Self::push_section_rows(&mut rows, headers, table);
+
+            rows
+        }
+
+        fn merge_rows<const N: usize>(base: [String; N], pm: [String; N]) -> [String; N] {
+            base.into_iter()
+                .zip(pm)
+                .enumerate()
+                .map(|(c, (b, p))| {
+                    if (2 <= c) && !(b.is_empty() && p.is_empty()) {
+                        return format!("{} ({})", b, p)
+                    } else { b }
+                })
+            .collect::<Vec<_>>()
+            .try_into()
+            .unwrap()
+        }
+
+        fn adjust_prices(
+            items: &[(String, i32, f32)],
+            multiplier: f64,
+        ) -> Vec<(String, i32, f32)> {
+            items.iter()
+            .map(|(name, price, qty)| {
+                let adjusted = (f64::from(*price) * multiplier) as i32;
+                (name.clone(), adjusted, *qty)
+            })
+            .collect()
+        }
+
         pub fn create_internal_table_body_rows(&mut self) {
-            const BLANK_LINE: [String;DETAILED_NUM_HEADERS] = [const{String::new()};DETAILED_NUM_HEADERS];
-
-            let current_internal_table = &mut self.recipe_tables[self.current_table_idx];
-
-            let section_headers = Self::generate_section_headers(
-                current_internal_table.percent_margin
+            let table = &mut self.recipe_tables[self.current_table_idx];
+            let percent_margin = table.percent_margin; // 1.0 for 1.0% NOT 0.01
+            let section_headers = Self::generate_section_headers( // Combined headings
+                percent_margin
             );
 
-            let mut res: Vec<_> = Vec::with_capacity(3 * Self::NUM_SECTION_HEADERS);
+            let base_rows = Self::generate_section_rows(&section_headers, table);
+            
 
-
-            // Base section
-            Self::push_section_rows(&mut res, &section_headers[DetailedSections::Normal], current_internal_table);
-
-            res.push(BLANK_LINE);
-            res.push(BLANK_LINE);
 
 
             // Price margin section
             // Update prices of inputs/outputs to reflect price margin
 
-            // Increase buy prices
-            let percent_margin = current_internal_table.percent_margin;
-            current_internal_table.inputs = current_internal_table.inputs.clone()
-                .into_iter()
-                .map(|(n, p, q)| (n, (f64::from(p) * f64::from(1. + percent_margin / 100.)) as i32, q))
-                .collect();
+            // Increase buy prices and decrease sell prices
+            table.inputs = Self::adjust_prices(&table.inputs, (1.0 + percent_margin/100.0).into());
+            table.outputs = Self::adjust_prices(&table.outputs, (1.0 - percent_margin/100.0).into());
 
-            // Decrease sell prices
-            current_internal_table.outputs = current_internal_table.outputs.clone()
-                .into_iter()
-                .map(|(n, p, q)| (n, (f64::from(p) * f64::from(1. - percent_margin / 100.)) as i32, q))
-                .collect();
+
+
+
+            // Generate PM section
 
             // Decrease number of recipe
             let input_cost_pm: i32 = DetailedTable::single_recipe_price(
-                &current_internal_table.inputs
+                &table.inputs
             );
-            
-            current_internal_table.overview.number = self.current_coins / input_cost_pm;
+            table.overview.number = self.current_coins / input_cost_pm;
 
             // Decrease profit of recipe
             let output_cost_pm: i32 = DetailedTable::single_recipe_price(
-                &current_internal_table.outputs
+                &table.outputs
             );
-            let profit_pm: i32 = output_cost_pm - input_cost_pm;
+            table.overview.profit = output_cost_pm - input_cost_pm;
 
-            current_internal_table.overview.profit = profit_pm;
+            let pm_rows = Self::generate_section_rows(&section_headers, table);
 
-            
-            Self::push_section_rows(&mut res, &section_headers[DetailedSections::PriceMargin], current_internal_table);
+
+            // Combine into final result
+            let res: Vec<[String; DETAILED_NUM_HEADERS]> = base_rows
+                .into_iter()
+                .zip(pm_rows)
+                .map(|(b, p)| Self::merge_rows(b, p))
+            .collect();
 
             self.current_table_rows = res;
+        }
+
+
+        fn _set_max_widths<I, T>(widths: &mut[usize; DETAILED_NUM_HEADERS],
+            // new: [usize; DETAILED_NUM_HEADERS]) {
+            new: I)
+        where I: IntoIterator<Item = T>,
+            T: Into<usize>
+        {
+            widths.iter_mut()
+                .zip(new)
+                .for_each(|(width, new_width)|
+                    *width = (*width).max(new_width.into())
+                );
         }
 
         /// Update `col_widths` with maximum cell widths across all rows
         /// # TODO
         /// Store results so not recalculating *EVERYTHING*
         pub fn update_widths(&mut self) {
-            let current_internal_table = &self.recipe_tables[self.current_table_idx];
+            let table = &self.recipe_tables[self.current_table_idx];
 
             // Check table headers lengths
-            for (i, header) in DETAILED_ROW_HEADERS.iter().enumerate() {
-                self.col_widths[i] = self.col_widths[i].max(header.len());
-            }
+            Self::_set_max_widths(&mut self.col_widths,
+                DETAILED_ROW_HEADERS.into_iter().map(str::len));
+
 
             // Check section headers for first column
             let section_headers = Self::generate_section_headers(
-                current_internal_table.percent_margin
+                table.percent_margin
             );
-            let max_section_header_length: usize = section_headers.values()
-                .flatten()
-                .map(String::len)
-                .max()
-                .unwrap_or(0);
-            self.col_widths[0] = self.col_widths[0].max(max_section_header_length);
+
+            if let Some(max_len) = section_headers.iter().map(String::len).max() {
+                self.col_widths[0] = self.col_widths[0].max(max_len);
+            } else { self.col_widths[0] = 0; }
+
 
             // Check all data rows lengths
             // Construct internal rows for current table
@@ -514,9 +543,8 @@ pub mod markdown {
 
 
             for row in &self.current_table_rows {
-                for (width, cell) in self.col_widths.iter_mut().zip(row.iter()) {
-                    *width = (*width).max(cell.len());
-                }
+                Self::_set_max_widths(&mut self.col_widths,
+                    row.iter().map(|s| s.len()))
             }
         }
     }
