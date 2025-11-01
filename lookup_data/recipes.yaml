@@ -299,6 +299,15 @@ Making snapdragon potions:
   outputs:
     Snapdragon potion (unf): 1
   time: 2
+Making guam potions:
+  name: "Making guam potions"
+  members: true
+  inputs:
+    Guam leaf: 1
+    Vial of water: 1
+  outputs:
+    Guam potion (unf): 1
+  time: 2
 Making Guthix rests:
   name: "Making Guthix rests"
   members: true
@@ -379,6 +388,15 @@ Smelting Steel Bars:
   outputs:
     Steel bar: 9
   time: 36
+Smelting Iron Bars:
+  name: "Smelting Iron Bars"
+  members: false
+  inputs:
+    Iron ore: 9
+    Coal: 18
+  outputs:
+    Iron bar: 9
+  time: 36
 Smelting Adamantite Bars:
   name: "Smelting Adamantite Bars"
   members: false
@@ -453,3 +471,165 @@ Making Super energy potion(3):
   outputs:
     Super energy(3): 1
   time: 2
+Cutting yew logs:
+  name: "Cutting yew logs"
+  members: true
+  inputs:
+    Secateurs attachment: 25
+  outputs:
+    Yew logs: 100
+    Yew leaves: 50
+    Anima-infused bark: 726
+  time: 6000 # Assuming 100 logs/hour
+Cooking raw karambwan:
+  name: "Cooking karambwan"
+  members: true
+  inputs:
+    Raw karambwan: 1
+  outputs:
+    Cooked karambwan: 1
+  time: 5 # Not tick perfect / added delays
+Catching tuna \& lobster (F2P):
+  name: "Catching tuna & lobster (F2P)"
+  members: false
+  inputs:
+    Coins: 480
+  outputs:
+    Raw swordfish: 78
+    Raw tuna: 117
+  time: 6000
+Stealing valuables:
+  name: "Stealing valuables"
+  members: true
+  inputs:
+  outputs:
+    Coins: 19040
+    Valuables: 1680
+    Gold necklace: 3.23
+    Gold ring: 3.23
+    Gold amulet: 3.23
+    Diamond necklace: 0.54
+    Diamond ring: 0.27
+    Diamond amulet: 0.81
+    Ruby necklace: 1.34
+    Ruby ring: 1.34
+    Ruby amulet: 0.54
+    Emerald necklace: 2.42
+    Emerald ring: 0.54
+    Emerald amulet: 2.69
+    Sapphire necklace: 2.42
+    Sapphire ring: 0.54
+    Sapphire amulet: 2.69
+  time: 6000 # 14 houses/hour
+Stranglewood fishing:
+  name: "Stranglewood fishing"
+  members: true
+  inputs:
+    Fishing bait: 5
+  outputs:
+    Raw pike: 1
+    Lobster pot: 1
+    Casket: 0.5
+    Acorn: 0.01
+    Red topaz: 0.001
+    Chromium ingot: 0.00001
+    Loop half of key (moon key): 0.0076
+  time: 300 # 100 fish/hour
+Cooking raw anchovies:
+  name: "Cooking anchovies"
+  members: false
+  inputs:
+    Raw anchovies: 1
+  outputs:
+    Cooked anchovies: 1
+  time: 5
+Poisoning dragon arrow:
+  name: "Poisoning dragon arrow"
+  members: true
+  inputs:
+    Weapon poison(++): 1
+    Dragon arrow: 5
+  outputs:
+    Dragon arrow(p++): 5
+  time: 1
+Poisoning amethyst arrow:
+  name: "Poisoning amethyst arrow"
+  members: true
+  inputs:
+    Weapon poison(++): 1
+    Amethyst arrow: 5
+  outputs:
+    Amethyst arrow(p++): 5
+  time: 1
+Poisoning dragon dart:
+  name: "Poisoning dragon dart"
+  members: true
+  inputs:
+    Weapon poison(++): 1
+    Dragon dart: 5
+  outputs:
+    Dragon dart(p++): 5
+  time: 1
+Making planks:
+  name: "Making planks"
+  members: true
+  inputs:
+    Logs: 27
+    Coins: 2700 # Sawmill fee
+  outputs:
+    Plank: 27
+  time: 42 # 25s trips from OSRS wiki
+Making oak planks:
+  name: "Making oak planks"
+  members: true
+  inputs:
+    Oak logs: 27
+    Coins: 6750 # Sawmill fee
+  outputs:
+    Oak plank: 27
+  time: 42 # 25s trips from OSRS wiki
+Making teak planks:
+  name: "Making teak planks"
+  members: true
+  inputs:
+    Teak logs: 27
+    Coins: 13500 # Sawmill fee
+  outputs:
+    Teak plank: 27
+  time: 42 # 25s trips from OSRS wiki
+Making mahogany planks:
+  name: "Making mahogany planks"
+  members: true
+  inputs:
+    Mahogany logs: 27
+    Coins: 40500 # Sawmill fee
+  outputs:
+    Mahogany plank: 27
+  time: 42 # 25s trips from OSRS wiki
+Making ardougne teleport tablets:
+  name: "Making ardougne teleport tablets"
+  members: true
+  inputs:
+    Law rune: 2 # Need Water staff
+    Soft clay: 1
+  outputs:
+    Ardougne teleport (tablet): 1
+  ticks: 5
+Making teleport to house tablets:
+  name: "Making teleport to house tablets"
+  members: true
+  inputs:
+    Law rune: 1 # Need dust battlestaff
+    Soft clay: 1
+  outputs:
+    Teleport to house (tablet): 1
+  ticks: 5
+Making varrock teleport tablets:
+  name: "Making varrock teleport tablets"
+  members: true
+  inputs:
+    Law rune: 1 # Need dust battlestaff
+    Soft clay: 1
+  outputs:
+    Teleport to house (tablet): 1
+  ticks: 5

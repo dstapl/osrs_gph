@@ -13,12 +13,13 @@ use tracing::{instrument, trace, warn};
 #[derive(Debug, Deserialize)]
 pub struct MappingItem {
     #[serde(default)]
-    pub highalch: i32,
+    pub highalch: i32, // Non alchable
     pub members: bool,
     pub name: String,
     pub examine: String,
     pub id: i32,
-    pub value: i32,
+    #[serde(default)]
+    pub value: i32, // E.g., Sets have no value
     pub icon: String,
     #[serde(default)]
     pub lowalch: i32,

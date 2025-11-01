@@ -4,6 +4,7 @@ version = "0.1.0"
 edition = "2021"
 default-run = "osrs_gph"
 
+
 [dependencies]
 enum-map = { version = "2.7.3", features = ["serde"] }
 itertools = "0.14.0"
