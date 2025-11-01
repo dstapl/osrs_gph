@@ -24,15 +24,14 @@ fn main() {
     let client = reqwest::blocking::Client::new();
     let user_agent: &str =
         "Mozilla/5.0 (Macintosh; Intel Mac OS X x.y; rv:42.0) Gecko/20100101 Firefox/42.0";
-    
+
     trace!(desc = "Sending API request");
-    let mapping_text = client
+    let mut mapping_text: String = client
         .get(config.api.url + "/mapping")
         .header(reqwest::header::USER_AGENT, user_agent)
         .send().expect("Failed to send API request")
         // TODO: Hopefully this won't get too big to fit in memory...
         .text().expect("Failed to parse text of response");
-
 
     // Write Response to file
     let mapping_path_str: String = config.filepaths.lookup_data.api_mapping;
@@ -41,16 +40,23 @@ fn main() {
     let mut mapping_fio =
         file_io::FileIO::new(mapping_path_str.clone(), FileOptions::new(true, true, true));
 
+
+    // Need to convert json to a common `Value` that serde_yaml_ng can write out
+    let mapping_value: serde_json::Value = serde_json::from_str(&mapping_text)
+        .expect("Failed to parse json response into a value");
+    
+
     trace!(desc = "Writing mapping to file");
     log_match_panic(
-        mapping_fio.write_serialized(&mapping_text),
+        mapping_fio.write_serialized(&mapping_value),
         &format!("Reading mapping file {mapping_path_str}"),
         &format!("Failed to parse mapping {mapping_path_str}"),
     );
-
+    mapping_text = serde_yaml_ng::to_string(&mapping_value)
+        .expect("Failed to convert JSON into YAML");
+        
     trace!(desc = "Re-/serialising mapping into YAML");
     let mapping: Vec<MappingItem> = serde_yaml_ng::from_str(&mapping_text).expect("Failed to serialise mapping_text into YAML");
-
 
     // Split mapping into id_to_name and name_to_id
     let id_to_name_str: String = config.filepaths.lookup_data.id_to_name;

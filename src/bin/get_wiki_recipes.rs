@@ -52,10 +52,11 @@ fn retrieve_webpage<'a, S: IntoUrl>(url: S, overwrite: bool) -> Result<String, E
     let path: &Path = Path::new("src\\bin\\wiki_info\\Money_making_guide.html");
     let read_from_file: bool = path.try_exists().is_ok_and(|x| x);
 
-    // If file doesn't exist and not overwriting...
-    // then skip to requesting the webpage
-    let body = if (!overwrite) && read_from_file {
-        // Read from existing file
+    let only_reading_old_file: bool = read_from_file && !overwrite;
+
+
+    // Read from existing file
+    if only_reading_old_file {
         let mut file = match File::open(path) {
             Err(why) => panic!("couldn't open {}: {}", path.display(), why),
             Ok(file) => file,
@@ -67,33 +68,32 @@ fn retrieve_webpage<'a, S: IntoUrl>(url: S, overwrite: bool) -> Result<String, E
             Ok(_) => println!("successfully read from {}", path.display()),
         }
 
-        body
-    } else {
-        // Just return api data
-        dbg!("DOING API REQUEST");
-        let client = reqwest::blocking::Client::new();
-        let user_agent: &str =
-            "Mozilla/5.0 (Macintosh; Intel Mac OS X x.y; rv:42.0) Gecko/20100101 Firefox/42.0";
-        client
-            .get(url)
-            .header(header::USER_AGENT, user_agent)
-            .send()?
-            .text()?
-    };
-
-    if overwrite || (!read_from_file) {
-        // Overwrite file with new body data
-        let mut file = match File::create(path) {
-            Err(why) => panic!("couldn't write to {}: {}", path.display(), why),
-            Ok(file) => file,
-        };
-        file.set_len(0)?;
-        match file.write(body.as_bytes()) {
-            Err(why) => panic!("couldn't write to {}: {}", path.display(), why),
-            Ok(_) => println!("successfully wrote to {}", path.display()),
-        }
-        file.sync_all().expect("Failed to sync data to filesystem");
+        return Ok(body)
     }
+
+
+    // Request fresh API data instead
+    dbg!("DOING API REQUEST");
+    let client = reqwest::blocking::Client::new();
+    const USER_AGENT: &str =
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X x.y; rv:42.0) Gecko/20100101 Firefox/42.0";
+    let body: String = client.get(url)
+        .header(header::USER_AGENT, USER_AGENT)
+        .send()?
+        .text()?;
+
+
+    // Overwrite file with the new body data
+    let mut file = match File::create(path) {
+        Err(why) => panic!("couldn't write to {}: {}", path.display(), why),
+        Ok(file) => file,
+    };
+    file.set_len(0)?;
+    match file.write(body.as_bytes()) {
+        Err(why) => panic!("couldn't write to {}: {}", path.display(), why),
+        Ok(_) => println!("successfully wrote to {}", path.display()),
+    }
+    file.sync_all().expect("Failed to sync data to filesystem");
 
     Ok(body)
 }
@@ -115,7 +115,9 @@ fn extract_table<'a, 'b: 'a>(
         .clone()
         .take(table_number)
         .nth(table_number - 1)
-        .unwrap_or_else(|| panic!("Failed to find table {table_number} in HTML"));
+        .unwrap_or_else(|| 
+            panic!("Failed to find table {table_number} in HTML")
+        );
 
     let contents: Vec<Vec<ElementRef<'a>>> = table_header
         .child_elements()
@@ -179,15 +181,16 @@ fn extract_spans_from_column<'a, 'b>(
         }
         // Spans directly
         _ => {
-            vec![column
+            vec![
+                column
                 .clone()
                 .into_iter()
                 .filter(|elementref| elementref.html().contains("<span"))
-                .collect()]
+                .collect()
+            ]
         }
     };
 
-    //dbg!(&reqs);
     Ok(reqs)
 }
 fn extract_column<'a: 'b, 'b>(
@@ -231,9 +234,8 @@ impl LevelRequirement {
     fn from_span(name: String, level_list_str: Option<&str>) -> Self {
         let name = if name == "Skills" {
             "Total Level".to_string()
-        } else {
-            name
-        };
+        } else { name };
+
 
         if level_list_str.is_none() {
             return Self::new(name, Vec::new(), Vec::new(), Vec::new());
@@ -268,17 +270,21 @@ impl LevelRequirement {
             );
         }
 
-        if strict_recommended {
-            let l = zip(&self.level_list, &self.recommended_list);
-            let mut recommended_levels: Vec<(&u32, &bool)> = l.filter(|(_, rec)| **rec).collect();
-            recommended_levels.sort_by(|a, b| (a.0).cmp(b.0)); // Ascending
-            let (&lvl, &rec) = recommended_levels.first().unwrap_or(&(&0, &false)); //.expect("This should not be empty...");
-            (lvl, rec)
-        } else {
+        // <= inequality check
+        if !strict_recommended {
             let mut recommended_levels = self.level_list.clone();
             recommended_levels.sort_unstable(); // Ascending
-            (*recommended_levels.first().unwrap_or(&0), false) //.expect("This should not be empty..."), false)
-        }
+            return (*recommended_levels.first().unwrap_or(&0), false) //.expect("This should not be empty..."), false)
+        } 
+
+
+        // < inequality check; Strict recommended
+        let l = zip(&self.level_list, &self.recommended_list);
+
+        let mut recommended_levels: Vec<(&u32, &bool)> = l.filter(|(_, rec)| **rec).collect();
+        recommended_levels.sort_by(|a, b| (a.0).cmp(b.0)); // Ascending
+        let (&lvl, &rec) = recommended_levels.first().unwrap_or(&(&0, &false)); //.expect("This should not be empty...");
+        return (lvl, rec)
     }
 
     fn parse_level(level_str: &str) -> (u32, bool, bool) {
@@ -368,6 +374,7 @@ impl LevelRequirement {
         let reqs: Vec<(u32, bool, bool)> =
             split_levels.into_iter().map(Self::parse_level).collect();
         //dbg!("success");
+
         let level_reqs: Vec<u32> = reqs.iter().map(|x| x.0).collect();
         let bool_reqs: Vec<bool> = reqs.iter().map(|x| x.1).collect();
         let total_reqs: Vec<bool> = reqs.iter().map(|x| x.2).collect();
@@ -391,11 +398,11 @@ fn config_has_required_levels(
     level_reqs.iter().all(|skill_requirements| {
         let name = skill_requirements.get_name();
         let lvl = skill_requirements.get_level(strict_recommended);
-        config_levels
-            .levels
+        
+        config_levels.levels
             .get(&name)
             .unwrap_or_else(|| panic!("Missing config level: {name} : {skill_requirements}"))
-            >= &lvl
+            .ge(&lvl)
     })
 }
 
@@ -497,9 +504,9 @@ fn main() -> Result<(), Errors<'static>> {
 
     //dbg!(&table);
     let rows = (1..=table.len())
-        .map(|row_num| {
+        .map(|row_num| 
             extract_row(&table, row_num).unwrap_or_else(|| panic!("Row {row_num} is empty"))
-        })
+        )
         .collect::<Vec<_>>();
     //let row = extract_row(&table, 15).expect("Row is empty");
 
@@ -508,9 +515,9 @@ fn main() -> Result<(), Errors<'static>> {
     let possible_methods_idx: Vec<usize> = rows
         .iter()
         .enumerate()
-        .filter_map(|(idx, row)| {
-            (has_required_levels_for_method(&config_levels, row)).then_some(idx)
-        })
+        .filter_map(|(idx, row)|
+            has_required_levels_for_method(&config_levels, row).then_some(idx)
+        )
         .collect();
 
     //dbg!(&possible_methods_idx);
@@ -536,8 +543,6 @@ fn main() -> Result<(), Errors<'static>> {
                 .replace("Money making guide/", "")
         })
         .collect();
-
-    //dbg!(&possible_methods_names);
 
     // Write results to a file
     // Overwrite file with new body data
