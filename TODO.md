@@ -16,6 +16,9 @@
         - [ ] If data doesn't exist as a file, warn user and error/exit
     - [ ] Add `--prompt` argument to restore original functionality
         - [ ] Change numbering to `yes/no (or y/n)` so compatible with `yes` command. 
+- [ ] Display name and reference name in `lookup_data\recipes.yaml` are not
+  consistent with code logic. Fix logic so is the same as the original
+  comment block.
 
 # Web migration
 - [ ] Create html/css(/js?) mockup

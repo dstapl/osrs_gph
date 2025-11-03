@@ -105,7 +105,7 @@ pub mod custom_types {
         [
             x.profit as f32,
             x.total_gp() as f32,
-            x.total_time(),
+            x.total_time().unwrap_or(0.),
             x.gph() as f32,
         ]
         .iter()

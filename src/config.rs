@@ -69,6 +69,7 @@ pub struct Weights {
 pub struct Profit {
     #[serde(deserialize_with = "deserialize_underscored_integer")]
     pub coins: i32,
+    #[serde(deserialize_with = "assert_positive_f32")]
     pub percent_margin: f32,
     #[serde(rename = "custom_weights")]
     pub weights: Weights,
@@ -324,7 +325,7 @@ where
     T: std::str::FromStr,
 {
     // First, deserialize the value as a string (which might fail...)
-    let mut s: String = serde::de::Deserialize::deserialize(deserializer)?;
+    let mut s = String::deserialize(deserializer)?;
 
     s.retain(char::is_numeric);
 
@@ -332,6 +333,22 @@ where
         serde::de::Error::custom("string does not represent an integer")
     })
 }
+
+fn assert_positive_f32<'de, D>(deserializer: D) -> Result<f32, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let value = f32::deserialize(deserializer)?;
+    if value > 0.0 { return Ok(value) };
+
+
+    let error = serde::de::Error::custom(format!(
+        "percent_margin must be positive, got {}",
+        value
+    ));
+    return Err(error)
+}
+
 
 use serde::{de::Visitor, Deserializer};
 use std::fmt;
