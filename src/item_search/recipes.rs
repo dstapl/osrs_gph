@@ -22,6 +22,9 @@ pub enum RecipeTime {
 pub struct Recipe {
     pub name: String,
     pub members: bool,
+    // Min taken between number/hour and calculation from cost
+    #[serde(default)] // None
+    pub number_per_hour: Option<i32>,
 
     pub inputs: HashMap<String, f32>,
     pub outputs: HashMap<String, f32>,
@@ -101,6 +104,7 @@ impl Recipe {
         Self {
             name: name.into(),
             members: false,
+            number_per_hour: None,
             inputs,
             outputs,
             ticks: ticks.into(),
@@ -108,7 +112,7 @@ impl Recipe {
     }
 
     pub fn isvalid(&self) -> bool {
-        self.ticks.isvalid()
+        self.ticks.isvalid() || self.number_per_hour.is_some()
     }
 }
 
@@ -143,7 +147,7 @@ impl RecipeBook {
             if r.isvalid() {
                 true
             } else {
-                warn!(desc = "Skipping recipe.", recipe_name = %r.name);
+                warn!(desc = "Skipping recipe inside RecipeBook.", recipe_name = %r.name);
                 false
             }
         });

@@ -5,6 +5,10 @@ pub mod latest {
     use serde::{de::Visitor, ser::SerializeStruct, Deserialize, Deserializer, Serialize};
     use std::{collections::HashMap, fmt};
 
+    pub const SPECIAL_ITEM_NAMES: [&str; 1] = [
+        "Coins",
+    ];
+
     #[derive(Debug, Clone, Default, Copy)]
     pub struct PriceDatum {
         pub high: Option<i32>,
@@ -136,6 +140,12 @@ pub mod latest {
                 || self.high_time.is_none()
                 || self.low.is_none()
                 || self.low_time.is_none()
+        }
+    }
+
+    impl PriceDataType {
+        pub fn add_datum(&mut self, name: String, price_datum: PriceDatum) -> Option<PriceDatum> {
+            self.data.insert(name, price_datum)
         }
     }
 }

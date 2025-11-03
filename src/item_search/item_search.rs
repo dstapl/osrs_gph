@@ -1,6 +1,6 @@
 //! Parsing items from [api](src/api.rs) data
 //! TODO: Support for different modules (timespans) other than just latest
-use super::data_types::latest::{self, PriceDataType}; //::PriceDatum;
+use super::data_types::latest::{self, PriceDataType, SPECIAL_ITEM_NAMES}; //::PriceDatum;
 
 use tracing::{debug, instrument, warn};
 
@@ -9,7 +9,9 @@ use std::{collections::HashMap, fmt::Debug, hash::Hash};
 
 use crate::config::FilePaths;
 use crate::file_io::{FileIO, FileOptions};
+use crate::item_search::data_types::latest::PriceDatum;
 use crate::{file_io, log_match_panic, log_panic};
+
 
 #[derive(Debug, Deserialize, Clone)]
 pub struct Item {
@@ -42,7 +44,11 @@ impl Item {
     }
 
     pub fn invalid_data(&self) -> bool {
-        self.item_prices.invalid_data()
+        // Ignore special items
+        let reserved = SPECIAL_ITEM_NAMES
+            .contains(&self.name.as_str());
+
+        !reserved && self.item_prices.invalid_data()
     }
 
     pub fn price(&self, high_price: bool) -> Option<i32> {
@@ -137,6 +143,7 @@ impl ItemSearch {
         }
     }
 
+
     /// Either from file (ideally) or from the api
     /// # Panics
     /// Will panic when the api response is empty
@@ -147,6 +154,7 @@ impl ItemSearch {
                 "Attempting to find prices from a stored mapping file.",
                 "Failed to find prices from file. May not exist or malformed data.",
             )
+
         } else {
             let api = crate::api::Api::new(&self.api_config);
             api.request_item_prices()
@@ -188,6 +196,25 @@ impl ItemSearch {
         }
     }
 
+
+    fn add_special_values(&mut self) {
+        // Add special values
+        const COIN_VALUE: i32 = 1;
+        const START_TIME: i32 = 0;
+        let coins_prices = PriceDatum{
+            high: Some(COIN_VALUE),
+            low: Some(COIN_VALUE),
+            // Start of time
+            high_time: Some(START_TIME),
+            low_time: Some(START_TIME),
+        };
+
+        let coins_datum = self.item_from_id_price("Coins".to_string(), coins_prices)
+            .expect("No ID found for `Coins`");
+        self.items.insert("Coins".to_string(), coins_datum); 
+    }
+
+
     #[instrument(level = "trace", skip(self, item_prices))]
     /// Update existing item price list with new entries
     /// Calls HashMap::extend
@@ -207,5 +234,14 @@ impl ItemSearch {
             let item = Item::new(name.clone(), id, price_data);
             self.items.insert(name, item);
         }
+
+        self.add_special_values();
+    }
+
+
+    fn item_from_id_price(&self, name: String, price: PriceDatum) -> Option<Item>{
+        let id = self.id_from_name(&name)?;
+
+        Some(Item::new(name, id.clone(), price))
     }
 }

@@ -33,6 +33,28 @@ pub struct PriceHandle {
 
 use crate::types::SECOND_PER_TICK;
 
+
+pub fn update_recipe_number(number_per_hour: Option<i32>, coins: i32, cost: i32) -> i32 {
+    let number = {
+        let user_number = number_per_hour.unwrap_or(i32::MAX);
+
+    if cost == 0 {
+        if user_number == i32::MAX {
+            warn!(desc = "Infinite number for recipe");
+        }
+        user_number
+    } else {
+        let effective_number: i32 = coins / cost;
+        // Minimum number of the two
+        effective_number.min(user_number)
+    }
+    
+    };
+
+    number.max(1)
+
+}
+
 impl PriceHandle {
     pub fn new(all_items: ItemSearch, recipe_list: RecipeBook, coins: i32, pmargin: f32) -> Self {
         Self {
@@ -140,7 +162,7 @@ impl PriceHandle {
                 };
             },
             OverviewSortBy::Time => {
-                all_overviews.sort_by_key(|k| (k.total_time() * SEC_IN_HOUR as f32) as i32);
+                all_overviews.sort_by_key(|k| (k.total_time().unwrap_or(f32::MAX) * SEC_IN_HOUR as f32) as i32);
                 if reverse {
                     all_overviews.reverse();
                 };
@@ -196,6 +218,8 @@ impl PriceHandle {
         self.recipe_price_overview_from_recipe(recipe)
     }
 
+
+
     /// Returns price overview and cost of inputs and (taxed) revenue from outputs
     #[allow(clippy::missing_panics_doc, reason = "infallible")]
     pub fn recipe_price_overview_from_recipe(&self, recipe: &Recipe) -> Option<(OverviewRow, (i32, i32))> {
@@ -204,7 +228,7 @@ impl PriceHandle {
         let output_items = self.parse_item_list(&recipe.outputs)?;
 
         let input_details = PriceHandle::item_list_prices_unchecked(input_items, true);
-        assert!(!input_details.is_empty());
+        // assert!(!input_details.is_empty());
 
         let output_details = PriceHandle::item_list_prices_unchecked(output_items, false);
         assert!(!output_details.is_empty());
@@ -221,20 +245,24 @@ impl PriceHandle {
         let time_ticks = recipe.ticks.clone();
         // Return None from function if Invalid
         let time_sec = match time_ticks {
-            RecipeTime::INVALID => None,
+            RecipeTime::INVALID => None, // Could be N/A e.g. slayer task
             RecipeTime::Time(recipe_time) => Some(recipe_time * SECOND_PER_TICK)
         };
 
-        if time_sec.is_none() {
-                warn!(desc = "INVALID RecipeTime", name = %recipe.name);
-                return None
-        }
 
-        let Some(time_sec) = time_sec else {
-                unreachable!("INVALID RecipeTime should already be checked");
+        // Stay None if time_sec is undefined
+        let user_number_per_hour = recipe.number_per_hour;
+
+        if time_sec.is_none() {
+            debug!(desc = "RecipeTime is not set.", name = %recipe.name);
+            if user_number_per_hour.is_none() {
+                warn!(desc = "RecipeTime AND number_per_hour are not set.", name = %recipe.name);
+                return None; // No valid values for number
+            };
         };
 
-        let number = self.coins / cost;
+        // One or more of time or user_number_per_hour is set
+        let number = update_recipe_number(user_number_per_hour, self.coins, cost);
 
         let overview = OverviewRow::new(
             recipe.name.clone(),
@@ -325,20 +353,32 @@ impl PriceHandle {
 
     pub fn parse_item_list(&self, item_list: &HashMap<String, f32>) -> Option<Vec<(Item, f32)>> {
         // TODO: Compare methods of take_while (then re-iter) vs filter_map
-        let filtered_items: Vec<Option<_>> = item_list
+        let filtered_items: Vec<(Item, f32)> = item_list
             .iter()
-            .map(|(item_name, &quantity)| {
+            // Stop if encounter None value rather than processing whole list
+            .map_while(|(item_name, &quantity)| {
                 self.all_items
                     .item_by_name(item_name)
                     .map(|item_option| (item_option.clone(), quantity))
             })
-            .take_while(Option::is_some)
             .collect();
 
         if item_list.len() == filtered_items.len() {
             // SAFETY: Know all elements are in lookup and are type Item
-            Some(filtered_items.into_iter().map(Option::unwrap).collect())
+            Some(filtered_items)
         } else {
+            let original_names = item_list.keys();
+            let new_names: Vec<_> = filtered_items.
+                iter().map(|(item, _)| item.name.clone())
+                .collect();
+            let difference: Vec<_> = original_names
+                .clone()
+                .into_iter()
+                .filter(|name| !new_names.contains(name))
+                .collect();
+            warn!(desc = "Items not found in item_list lookup",
+                diff = ?difference, old = ?original_names, new = ?new_names
+            );
             None
         }
     }

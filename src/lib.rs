@@ -74,3 +74,17 @@ pub fn make_subscriber(filepath: String, log_level: Level) -> impl tracing::Subs
             .with_filter(LevelFilter::from_level(log_level)),
     )
 }
+
+pub fn check_items_exists<const N: usize>(item_search: &item_search::item_search::ItemSearch, item_names: &[&str; N]) {
+    for item_name in item_names {
+       let item_res = item_search.items.get(*item_name)
+           .map(|_| Some(())) // Remove dependence on lifetimes for success
+           .ok_or(());
+        log_match_panic(
+            item_res,
+            &format!("{item_name} IS in item_search"),
+            &format!("{item_name} is NOT in item_search"),
+        );
+    };
+
+}

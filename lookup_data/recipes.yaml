@@ -4,8 +4,9 @@
 #   inputs: {}
 #   outputs: {}
 #   time: 1  # Measured in ticks
-Ruby Rings:
+Ruby rings:
   name: "Ruby Rings"
+  number_per_hour: 1040 # Lowest at 80 trips/hour * 13 items/inv
   members: false
   inputs:
     Gold bar: 1
@@ -13,108 +14,131 @@ Ruby Rings:
   outputs:
     Ruby ring: 1
   time: 3
-Ruby Necklaces:
+Ruby necklaces:
   name: "Ruby Necklaces"
   members: false
+  number_per_hour: 1040
   inputs:
     Gold bar: 1
     Ruby: 1
   outputs:
     Ruby necklace: 1
   time: 3
-Ruby Amulets:
+Ruby Necklaces then HA:
+  name: "Ruby Necklaces then HA"
+  members: false
+  number_per_hour: 1040
+  inputs:
+    Gold bar: 1
+    Ruby: 1
+    Nature rune: 1
+  outputs:
+    Coins: 1305
+  time: 9 # Smelt(3) + HA(5) + 1; probably {+0, +1}
+Ruby amulets:
   name: "Ruby Amulets"
   members: false
+  number_per_hour: 1040
   inputs:
     Gold bar: 1
     Ruby: 1
   outputs:
     Ruby amulet (u): 1
   time: 3
-Emerald Rings:
+Emerald rings:
   name: "Emerald Rings"
   members: false
+  number_per_hour: 1040
   inputs:
     Gold bar: 1
     Emerald: 1
   outputs:
     Emerald ring: 1
   time: 3
-Emerald Necklaces:
+Emerald necklaces:
   name: "Emerald Necklaces"
   members: false
+  number_per_hour: 1040
   inputs:
     Gold bar: 1
     Emerald: 1
   outputs:
     Emerald necklace: 1
   time: 3
-Emerald Amulets:
+Emerald amulets:
   name: "Emerald Amulets"
   members: false
+  number_per_hour: 1040
   inputs:
     Gold bar: 1
     Emerald: 1
   outputs:
     Emerald amulet (u): 1
   time: 3
-Diamond Rings:
+Diamond rings:
   name: "Diamond Rings"
   members: false
+  number_per_hour: 1040
   inputs:
     Gold bar: 1
     Diamond: 1
   outputs:
     Diamond ring: 1
   time: 3
-Diamond Necklaces:
+Diamond necklaces:
   name: "Diamond Necklaces"
   members: false
+  number_per_hour: 1040
   inputs:
     Gold bar: 1
     Diamond: 1
   outputs:
     Diamond necklace: 1
   time: 3
-Diamond Amulets:
+Diamond amulets:
   name: "Diamond Amulets"
   members: false
+  number_per_hour: 1040
   inputs:
     Gold bar: 1
     Diamond: 1
   outputs:
     Diamond amulet (u): 1
   time: 3
-Sapphire Rings:
+Sapphire rings:
   name: "Sapphire Rings"
   members: false
+  number_per_hour: 1040
   inputs:
     Gold bar: 1
     Sapphire: 1
   outputs:
     Sapphire ring: 1
   time: 3
-Sapphire Necklaces:
+Sapphire necklaces:
   name: "Sapphire Necklaces"
   members: false
+  number_per_hour: 1040
   inputs:
     Gold bar: 1
     Sapphire: 1
   outputs:
     Sapphire necklace: 1
   time: 3
-Sapphire Amulets:
+Sapphire amulets:
   name: "Sapphire Amulets"
   members: false
+  number_per_hour: 1040
   inputs:
     Gold bar: 1
     Sapphire: 1
   outputs:
     Sapphire amulet (u): 1
   time: 3
-Humidify Clay:
+Humidify clay:
   name: "Humidify Clay"
   members: true
+  number_per_hour: 750 # Wiki says 815
   inputs:
     Astral rune: 1
     Clay: 27
@@ -161,7 +185,7 @@ Crushing bird nests (Auto):
   name: "Crushing bird nests (Auto)"
   members: true
   inputs:
-    Bird nest: 1
+    Bird nest (empty): 1
   outputs:
     Crushed nest: 1
   time: 3
@@ -169,13 +193,14 @@ Crushing bird nests (Manual):
   name: "Crushing bird nests (Manual)"
   members: true
   inputs:
-    Bird nest: 1
+    Bird nest (empty): 1
   outputs:
     Crushed nest: 1
   time: 1
 Degriming grimy cadantine:
   name: "Degriming grimy cadantine"
   members: true
+  number_per_hour: 600 # Effective wiki value for Degrime page; Max eff 750
   inputs:
     Grimy cadantine: 27
     Nature rune: 2
@@ -185,6 +210,7 @@ Degriming grimy cadantine:
 Degriming grimy torstol:
   name: "Degriming grimy torstol"
   members: true
+  number_per_hour: 600
   inputs:
     Grimy torstol: 27
     Nature rune: 2
@@ -194,6 +220,7 @@ Degriming grimy torstol:
 Degriming grimy avantoe:
   name: "Degriming grimy avantoe"
   members: true
+  number_per_hour: 600
   inputs:
     Grimy avantoe: 27
     Nature rune: 2
@@ -203,6 +230,7 @@ Degriming grimy avantoe:
 Degriming grimy lantadyme:
   name: "Degriming grimy lantadyme"
   members: true
+  number_per_hour: 600
   inputs:
     Grimy lantadyme: 27
     Nature rune: 2
@@ -212,6 +240,7 @@ Degriming grimy lantadyme:
 Degriming grimy ranarr weed:
   name: "Degriming grimy ranarr weed"
   members: true
+  number_per_hour: 600
   inputs:
     Grimy ranarr weed: 27
     Nature rune: 2
@@ -221,6 +250,7 @@ Degriming grimy ranarr weed:
 Making irit potions:
   name: "Making irit potions"
   members: true
+  # TODO: number_per_hour
   inputs:
     Irit leaf: 1
     Vial of water: 1
@@ -308,7 +338,7 @@ Making guam potions:
   outputs:
     Guam potion (unf): 1
   time: 2
-Making Guthix rests:
+Making guthix rests:
   name: "Making Guthix rests"
   members: true
   inputs:
@@ -321,7 +351,7 @@ Making Guthix rests:
     Guthix rest(4): 0.75
     Empty cup: 0.25
     Bowl: 1
-Casting Bones to Bananas (F2P):
+Casting bones to bananas (F2P):
   name: "Casting Bones to Bananas (F2P)"
   members: false
   inputs:
@@ -330,9 +360,10 @@ Casting Bones to Bananas (F2P):
     Earth rune: 1
   outputs:
     Banana: 26
-Casting Tan Leather (Black d'hide):
+Casting tan leather (Black d'hide):
   name: "Casting Tan Leather (Black d'hide)"
   members: true
+  number_per_hour: 1500 # Wiki says 1600
   inputs:
     Nature rune: 1
     Astral rune: 2
@@ -340,9 +371,10 @@ Casting Tan Leather (Black d'hide):
   outputs:
     Black dragon leather: 5
   time: 3
-Casting Tan Leather (Red d'hide):
+Casting tan leather (Red d'hide):
   name: "Casting Tan Leather (Red d'hide)"
   members: true
+  number_per_hour: 1500
   inputs:
     Nature rune: 1
     Astral rune: 2
@@ -350,7 +382,7 @@ Casting Tan Leather (Red d'hide):
   outputs:
     Red dragon leather: 5
   time: 3
-Making Super energy potions:
+Making super energy potions:
   name: "Making Super energy potions"
   members: true
   inputs:
@@ -362,6 +394,7 @@ Making Super energy potions:
 Gargoyles (Off-task):
   name: "Gargoyles (Off-task)"
   members: true
+  number_per_hour: 1
   inputs:
     Coins: 15300
   outputs:
@@ -377,9 +410,25 @@ Gargoyles (Off-task):
     Mithril bar: 35.16
     Runite ore: 2.34
     Coins: 95859
-  time: 0
+  # # TODO: Change to higher value and reduce number_per_hour to compensate
+  # inputs:
+  #   Coins: 15300
+  # outputs:
+  #   Granite maul: 0.0039
+  #   Rune full helm: 0.023
+  #   Rune 2h sword: 0.016
+  #   Rune battleaxe: 0.0078
+  #   Rune platelegs: 0.0078
+  #   Chaos rune: 1.88
+  #   Death rune: 0.59
+  #   Gold ore: 1.17
+  #   Steel bar: 0.7
+  #   Mithril bar: 0.23
+  #   Runite ore: 0.016
+  #   Coins: 639
+  #
 # Adjust time to include smithing
-Smelting Steel Bars:
+Smelting steel bars:
   name: "Smelting Steel Bars"
   members: false
   inputs:
@@ -388,7 +437,7 @@ Smelting Steel Bars:
   outputs:
     Steel bar: 9
   time: 36
-Smelting Iron Bars:
+Smelting iron bars:
   name: "Smelting Iron Bars"
   members: false
   inputs:
@@ -397,7 +446,7 @@ Smelting Iron Bars:
   outputs:
     Iron bar: 9
   time: 36
-Smelting Adamantite Bars:
+Smelting adamantite bars:
   name: "Smelting Adamantite Bars"
   members: false
   inputs:
@@ -406,7 +455,7 @@ Smelting Adamantite Bars:
   outputs:
     Adamantite bar: 4
   time: 16
-Smelting Mithril Bars:
+Smelting mithril bars:
   name: "Smelting Mithril Bars"
   members: false
   inputs:
@@ -415,18 +464,17 @@ Smelting Mithril Bars:
   outputs:
     Mithril bar: 5
   time: 20
-Killing Urium Shades:
+Killing urium shades:
   name: "Killing Urium Shades"
   members: true
+  number_per_hour: 1
   inputs:
     Divine super combat potion(4): 2
     Prayer potion(4): 6
   # Based on a test kills/hour (2 trips total tele to Burgh)
   outputs:
     Urium remains: 101
-  # 1 / (kills/hour) in seconds
-  time: 4400
-Making Prayer potion(3):
+Making prayer potion(3):
   name: "Making Prayer potion(3)"
   members: true
   inputs:
@@ -435,7 +483,7 @@ Making Prayer potion(3):
   outputs:
     Prayer potion(3): 1
   time: 2
-Making Prayer potion(4):
+Making prayer potion(4):
   name: "Making Prayer potion(4)"
   members: true
   inputs:
@@ -444,7 +492,7 @@ Making Prayer potion(4):
   outputs:
     Prayer potion(4): 3
   time: 10 # Extra time since need to convert at GE NPC
-Making Prayer regeneration potion(3):
+Making prayer regeneration potion(3):
   name: "Making Prayer regeneration potion(3)"
   members: true
   inputs:
@@ -453,7 +501,7 @@ Making Prayer regeneration potion(3):
   outputs:
     Prayer regeneration potion(3): 1
   time: 8
-Making Prayer regeneration potion(4):
+Making prayer regeneration potion(4):
   name: "Making Prayer regeneration potion(4)"
   members: true
   inputs:
@@ -462,7 +510,7 @@ Making Prayer regeneration potion(4):
   outputs:
     Prayer regeneration potion(3): 3
   time: 10 # Extra time since need to convert at GE NPC
-Making Super energy potion(3):
+Making super energy potion(3):
   name: "Making Super energy potion(3)"
   members: true
   inputs:
@@ -474,13 +522,15 @@ Making Super energy potion(3):
 Cutting yew logs:
   name: "Cutting yew logs"
   members: true
+  number_per_hour: 210
   inputs:
     Secateurs attachment: 25
   outputs:
-    Yew logs: 100
-    Yew leaves: 50
-    Anima-infused bark: 726
-  time: 6000 # Assuming 100 logs/hour
+    Yew logs: 1
+    Yew leaves: 0.5
+    # Selling for felling axe handle - need 10,000
+    # Anima-infused bark: 7.26
+    Felling axe handle: 0.000726
 Cooking raw karambwan:
   name: "Cooking karambwan"
   members: true
@@ -489,22 +539,28 @@ Cooking raw karambwan:
   outputs:
     Cooked karambwan: 1
   time: 5 # Not tick perfect / added delays
-Catching tuna \& lobster (F2P):
-  name: "Catching tuna & lobster (F2P)"
+Catching tuna \& swordfish (F2P):
+  name: "Catching tuna & swordfish (F2P)"
   members: false
+  number_per_hour: 1
   inputs:
     Coins: 480
   outputs:
     Raw swordfish: 78
     Raw tuna: 117
-  time: 6000
 Stealing valuables:
   name: "Stealing valuables"
   members: true
+  # number_per_hour: 14 houses / hour
+  number_per_hour: 1
   inputs:
   outputs:
-    Coins: 19040
-    Valuables: 1680
+    # TODO: Current data is for 14 houses over an hour
+    #   Change to 1 house loot avg
+    # Coins(base = 19040) + 55*valuables
+    # Valuables: 1680 --> 92400
+    # 19040 + 92400
+    Coins: 111440
     Gold necklace: 3.23
     Gold ring: 3.23
     Gold amulet: 3.23
@@ -520,10 +576,10 @@ Stealing valuables:
     Sapphire necklace: 2.42
     Sapphire ring: 0.54
     Sapphire amulet: 2.69
-  time: 6000 # 14 houses/hour
 Stranglewood fishing:
   name: "Stranglewood fishing"
   members: true
+  number_per_hour: 100
   inputs:
     Fishing bait: 5
   outputs:
@@ -533,15 +589,16 @@ Stranglewood fishing:
     Acorn: 0.01
     Red topaz: 0.001
     Chromium ingot: 0.00001
-    Loop half of key (moon key): 0.0076
-  time: 300 # 100 fish/hour
+    # Loop half of key (moon key): 0.0076
+  # time: 300 # 100 fish/hour
 Cooking raw anchovies:
   name: "Cooking anchovies"
   members: false
+  number_per_hour: 1300 # Wiki recommmended value
   inputs:
     Raw anchovies: 1
   outputs:
-    Cooked anchovies: 1
+    Anchovies: 1
   time: 5
 Poisoning dragon arrow:
   name: "Poisoning dragon arrow"
@@ -633,3 +690,19 @@ Making varrock teleport tablets:
   outputs:
     Teleport to house (tablet): 1
   ticks: 5
+Grinding chocolate bars (auto):
+  name: "Grinding chocolate bars (auto)"
+  members: false
+  inputs:
+    Chocolate bar: 1
+  outputs:
+    Chocolate dust: 1
+  time: 3
+Grinding chocolate bars (manual):
+  name: "Grinding chocolate bars (manual)"
+  members: false
+  inputs:
+    Chocolate bar: 1
+  outputs:
+    Chocolate dust: 1
+  time: 1 # 0-tick but add delays/tired

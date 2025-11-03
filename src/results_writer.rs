@@ -407,8 +407,9 @@ pub mod markdown {
             // Profit/Loss
             header = [const{String::new()};DETAILED_NUM_HEADERS];
             header[0].clone_from(&section_headers[4]);
+            header[3] = (current_internal_table.overview.total_gp() / current_internal_table.overview.number).to_comma_sep_string(); // i32 division
             header[4] = current_internal_table.overview.total_gp().to_comma_sep_string();
-            header[5] = current_internal_table.overview.total_time().to_string();
+            header[5] = current_internal_table.overview.format_time_string();
             header[6] = current_internal_table.overview.gph().to_comma_sep_string();
             res.push(header);
 
@@ -448,7 +449,7 @@ pub mod markdown {
             items.iter()
             .map(|(name, price, qty)| {
                 let adjusted = (f64::from(*price) * multiplier) as i32;
-                (name.clone(), adjusted, *qty)
+                (name.clone(), adjusted.max(1), *qty)
             })
             .collect()
         }
@@ -481,7 +482,16 @@ pub mod markdown {
             let input_cost_pm: i32 = DetailedTable::single_recipe_price(
                 &table.inputs
             );
-            table.overview.number = self.current_coins / input_cost_pm;
+
+            // Current number is min(user_number_per_hour, effective_nph)
+            // Since the cost will increase with a positive % margin
+            // Then effective_nph will decrease further
+            // --> output will be effective_nph
+            table.overview.number = crate::prices::prices::update_recipe_number(
+                Some(table.overview.number),
+                self.current_coins,
+                input_cost_pm,
+            );
 
             // Decrease profit of recipe
             let output_cost_pm: i32 = DetailedTable::single_recipe_price(

@@ -26,7 +26,7 @@ filepaths:
 
 profit:
   # Underscores are removed from strings
-  coins: 2_700_000
+  coins: 1_300_000
   percent_margin: 1.5 # buy +%, sell -% -> overall diff 2*%
 
   custom_weights: # Only if `custom` is selected in display.sort_by
@@ -38,7 +38,7 @@ profit:
   # Recipes will be ignored if any required items are listed here
   # (Items that have hit the buy limit or are just unwanted)
   ignore_items:
-    -
+    - Chocolate bar
 
 display:
   # File output (Frontend)
@@ -48,14 +48,11 @@ display:
   lookup: # For recipe_lookup.md
     # Number of entries from optimal_overview to lookup in recipe_lookup
     # (0 == None / Disabled)
-    top: 0
+    top: 3
     # Specific entries which might not be in the top bracket
     specific:
-      - Degriming grimy avantoe
-      - Making Prayer potion(4)
-      - Making Prayer potion(3)
-      - Making Prayer regeneration potion(3)
-      - Making Prayer regeneration potion(4)
+      - Ruby Necklaces
+      - Ruby Necklaces then HA
 
   # name, profit, time, gph, custom
   sort_by: profit
@@ -67,7 +64,7 @@ display:
     reverse: false
 
   # Only show results from: f2p, p2p, both
-  membership: p2p
+  membership: f2p
   
 
 levels:

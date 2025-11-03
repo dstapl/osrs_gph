@@ -4,13 +4,13 @@ use std::{
 };
 
 use reqwest::{blocking, header::HeaderMap};
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 use crate::{item_search::data_types, log_match_panic, log_panic};
 
 use tracing::{instrument, trace, warn};
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 pub struct MappingItem {
     #[serde(default)]
     pub highalch: i32, // Non alchable

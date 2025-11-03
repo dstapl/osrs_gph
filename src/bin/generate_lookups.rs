@@ -4,7 +4,11 @@ use osrs_gph::file_io::{self, FileOptions, SerChoice};
 use osrs_gph::log_match_panic;
 use std::collections::HashMap;
 use std::io::Read;
+use std::str::FromStr;
 
+
+
+use serde_json;
 use tracing::{debug, span, trace, Level};
 
 fn main() {
@@ -42,9 +46,32 @@ fn main() {
 
 
     // Need to convert json to a common `Value` that serde_yaml_ng can write out
-    let mapping_value: serde_json::Value = serde_json::from_str(&mapping_text)
+    let mut mapping_value: Vec<serde_json::Value>= serde_json::from_str(&mapping_text)
         .expect("Failed to parse json response into a value");
     
+
+    // Add special currencies into mapping
+    let coins = MappingItem{
+        highalch: i32::default(),
+        members: false,
+        name: "Coins".to_string(),
+        examine: "Lovely money!".to_string(),
+        id: 995, // Basic Coins
+        value: 1,
+        icon: "https://oldschool.runescape.wiki/images/thumb/Coins_detail.png/240px-Coins_detail.png".to_string(),
+        lowalch: i32::default(),
+    };
+
+    let special_items: Vec<serde_json::Value> = serde_json::from_str(
+        &serde_json::ser::to_string(
+            &vec![coins]
+        )
+        .expect("Failed to convert special items into json")
+    ).expect("Failed to convert special items json str into json value");
+        
+
+    // Concatenate
+    mapping_value.extend(special_items);
 
     trace!(desc = "Writing mapping to file");
     log_match_panic(

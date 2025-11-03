@@ -9,7 +9,7 @@ use osrs_gph::{
     file_io::{FileIO, FileOptions},
     helpers::Input,
     item_search::recipes::RecipeBook,
-    log_match_panic, log_panic,
+    log_match_panic, log_panic, check_items_exists,
     prices::prices::PriceHandle,
     results_writer::markdown::{DetailedRecipeLookup, OptimalOverview},
     types::{DetailedTable, ResultsTable, DETAILED_NUM_HEADERS, OVERVIEW_NUM_HEADERS},
@@ -66,6 +66,10 @@ fn main() {
     // Populate with items (from_file)
     let item_prices = item_search.get_item_prices(true);
     item_search.update_item_prices(item_prices);
+
+    trace!(desc = "After update_item_prices");
+    // Check important items exist in memory
+    check_items_exists(&item_search, &["Coins"]);
 
     // Get ignored items from the config
     let ignore_items: Vec<String> = conf.profit.ignore_items.clone();
@@ -204,3 +208,4 @@ fn request_new_prices_from_api(api_settings: &config::Api, file: &mut FileIO) {
         "Failed to write to file.",
     );
 }
+

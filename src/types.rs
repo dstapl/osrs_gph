@@ -65,7 +65,7 @@ pub struct OverviewRow {
     // loss/gain, (total)loss/gain, time (hours), gph
     // Repeated values can be calculated by multiplying number of recipes made
     pub profit: i32, // Can be negative
-    pub time_sec: f32,
+    pub time_sec: Option<f32>,
     pub number: i32, // TODO: Cap at i32 limit if using u32
 }
 
@@ -86,7 +86,7 @@ pub struct DetailedTable {
 
 impl OverviewRow {
     /// Construct a new row 
-    pub fn new(name: String, profit: i32, time_sec: f32, number: i32) -> Self {
+    pub fn new(name: String, profit: i32, time_sec: Option<f32>, number: i32) -> Self {
         OverviewRow {
             name,
             profit,
@@ -96,28 +96,44 @@ impl OverviewRow {
     }
 
     /// Total time in hours
-    pub fn total_time(&self) -> f32 {
+    pub fn total_time(&self) -> Option<f32> {
         #[allow(clippy::cast_precision_loss)]
         // Number of recipes isn't going to be larger than 10,000 at most
         // This is well under f32 limit of 2^23.
-        let unrounded: f32 = self.time_sec * (self.number as f32) / f32::from(SEC_IN_HOUR);
+        let unrounded: f32 = self.time_sec? * (self.number as f32) / f32::from(SEC_IN_HOUR);
 
-        f_round(unrounded, 2)
+        Some(f_round(unrounded, 2))
     }
     pub fn total_gp(&self) -> i32 {
         self.profit * self.number
     }
     pub fn gph(&self) -> i32 {
         #[allow(clippy::cast_possible_truncation, clippy::cast_precision_loss)]
-        return (f32::from(SEC_IN_HOUR) * self.profit as f32 / self.time_sec).floor() as i32;
+        if self.time_sec.is_none() {
+            // Use number_per_hour
+            // self.number * self.total_gp()
+            self.total_gp() // Per hour already
+        } else {
+            (
+                f32::from(SEC_IN_HOUR) * self.profit as f32
+                / unsafe { self.time_sec.unwrap_unchecked() }
+            ).floor() as i32
+        }
     }
 
+    pub fn format_time_string(&self) -> String {
+        // TODO: Use estimate from (number/number_per_hour) * hours
+        // in unwrap_or
+        self.total_time()
+            .map(|t| t.to_string())
+            .unwrap_or("1.0".to_string()) // Since number_per_hour
+    }
     pub fn to_string_cells(&self) -> [String; OVERVIEW_NUM_HEADERS] {
         [
             self.name.clone(),
             self.profit.to_comma_sep_string(),
             self.total_gp().to_comma_sep_string(),
-            self.total_time().to_string(),
+            self.format_time_string(),
             self.gph().to_comma_sep_string(),
         ]
     }
@@ -147,7 +163,7 @@ impl DetailedTable {
         #[allow(clippy::cast_possible_truncation)]
         inputs.iter()
             // Price * Quantity
-            .map(|r| (f64::from(r.1) * f64::from(r.2)) as i32)
+            .map(|(_, p, q)| (f64::from(*p) * f64::from(*q)) as i32)
             .sum()
     }
 
@@ -164,7 +180,7 @@ impl DetailedTable {
         self.overview.number * single_price
     }
 
-    pub fn total_time(&self) -> f32 {
+    pub fn total_time(&self) -> Option<f32> {
         self.overview.total_time()
     }
 }
