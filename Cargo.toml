@@ -7,6 +7,8 @@ default-run = "osrs_gph"
 
 [dependencies]
 enum-map = { version = "2.7.3", features = ["serde"] }
+clap = { version = "4.5.51", features = ["derive"] }
+clap_derive = "4.5.49"
 itertools = "0.14.0"
 num-format = "0.4.4"
 reqwest = { version = "0.12.15", features = ["blocking"] }
