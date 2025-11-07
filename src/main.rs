@@ -16,6 +16,17 @@ use osrs_gph::{
 };
 use tracing::{info, span, trace, warn, Level};
 
+use clap::{Parser, builder::ArgAction};
+
+#[derive(Parser)]
+#[command(about, long_about = None)]
+struct Cli {
+    /// Refresh prices or not
+    #[clap(short = 'r', long, action = ArgAction::SetTrue)]
+    refresh: bool,
+}
+
+
 fn main() {
     let conf: config::Config = config::load_config("config.yaml");
 
@@ -31,29 +42,35 @@ fn main() {
 
     trace!(desc = "Loaded config and created subscriber to log file.");
 
+
+    trace!(desc = "Parsing CLI arguments");
+    let cli = Cli::parse();
+
+
     // Initialise with price data file path
     let mut file = FileIO::new(
         conf.filepaths.price_data.clone(),
         FileOptions::new(true, true, true),
     );
 
-    trace!(desc = "Taking user input...");
-    let inp = String::new().input("1. API Refresh Data\n2. Load previous Data\n");
-    trace!(raw_input = %inp);
 
-    let choice = inp.trim_end();
-    trace!(choice = %choice);
+    trace!(desc = "Handling refresh flag");
+    let choice: bool = cli.refresh;
+    trace!(refresh = choice);
 
     // Referesh API prices
     match choice {
-        "1" => {
-            info!(desc = "Retrieving prices from API.");
+        true => {
+            let msg = "Retrieving prices from API.";
+            info!(desc = msg);
+            println!("{msg}");
             request_new_prices_from_api(&conf.api, &mut file);
         }
-        "2" => {
-            info!(desc = "Loading previous data instead.");
+        false => {
+            let msg = "Loading previous data instead.";
+            info!(desc = msg);
+            println!("{msg}");
         }
-        _ => log_panic("Bad choice", choice),
     }
 
     // Create item search

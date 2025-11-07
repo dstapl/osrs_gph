@@ -26,7 +26,7 @@ filepaths:
 
 profit:
   # Underscores are removed from strings
-  coins: 1_300_000
+  coins: 1_500_000
   percent_margin: 1.5 # buy +%, sell -% -> overall diff 2*%
 
   custom_weights: # Only if `custom` is selected in display.sort_by
@@ -48,7 +48,7 @@ display:
   lookup: # For recipe_lookup.md
     # Number of entries from optimal_overview to lookup in recipe_lookup
     # (0 == None / Disabled)
-    top: 3
+    top: 2
     # Specific entries which might not be in the top bracket
     specific:
       - Ruby Necklaces
