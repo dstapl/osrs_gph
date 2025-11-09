@@ -26,12 +26,24 @@ pub struct Recipe {
     #[serde(default)] // None
     pub number_per_hour: Option<i32>,
 
-    pub inputs: HashMap<String, f32>,
+    // pub inputs: HashMap<String, f32>,
+    #[serde(flatten)]
+    pub inputs: RecipeInputs,
+
     pub outputs: HashMap<String, f32>,
 
     #[serde(alias = "time")]
     pub ticks: RecipeTime,
 }
+
+#[derive(Debug, Deserialize, Default, Clone)]
+pub struct RecipeInputs {
+    pub pay_once: Option<HashMap<String, f32>>,
+
+    #[serde(default)]
+    pub inputs: HashMap<String, f32>
+}
+
 
 #[derive(Debug, Deserialize, Default)]
 pub struct RecipeBook {
@@ -97,7 +109,8 @@ impl<'de> Deserialize<'de> for RecipeTime {
 impl Recipe {
     pub fn new<S: Into<String>, T: Into<RecipeTime>>(
         name: S,
-        inputs: HashMap<String, f32>,
+        // inputs: HashMap<String, f32>,
+        inputs: RecipeInputs,
         outputs: HashMap<String, f32>,
         ticks: T,
     ) -> Self {
@@ -247,3 +260,4 @@ impl<F: Into<f32>> From<F> for RecipeTime {
         }
     }
 }
+

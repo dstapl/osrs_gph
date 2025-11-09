@@ -64,6 +64,7 @@ pub struct OverviewRow {
     // *apart from time which is in decimal hours (Lower abs value)
     // loss/gain, (total)loss/gain, time (hours), gph
     // Repeated values can be calculated by multiplying number of recipes made
+    pub pay_once_total: Option<i32>,
     pub profit: i32, // Can be negative
     pub time_sec: Option<f32>,
     pub number: i32, // TODO: Cap at i32 limit if using u32
@@ -79,16 +80,23 @@ pub struct OverviewRow {
 #[derive(Debug, Default, Clone)]
 pub struct DetailedTable {
     pub overview: OverviewRow,
-    pub inputs: Vec<(String, i32, f32)>, // Store item name, price, quantity FOR A SINGLE RECIPE
+    // Store item name, price, quantity FOR A SINGLE RECIPE
+    pub inputs: TableInputs,
     pub outputs: Vec<(String, i32, f32)>, // Ditto
     pub percent_margin: f32, // 2.5% == 2.5
+}
+#[derive(Debug, Default, Clone)]
+pub struct TableInputs {
+    pub pay_once: Option<Vec<(String, i32, f32)>>,
+    pub inputs: Vec<(String, i32, f32)>,
 }
 
 impl OverviewRow {
     /// Construct a new row 
-    pub fn new(name: String, profit: i32, time_sec: Option<f32>, number: i32) -> Self {
+    pub fn new(name: String, pay_once_total: Option<i32>, profit: i32, time_sec: Option<f32>, number: i32) -> Self {
         OverviewRow {
             name,
+            pay_once_total,
             profit,
             time_sec,
             number,
@@ -104,8 +112,22 @@ impl OverviewRow {
 
         Some(f_round(unrounded, 2))
     }
+
+    pub fn ideal_loss_gain(&self) -> i32 {
+        self.profit
+    }
+
+    pub fn loss_gain(&self) -> i32 {
+        self.ideal_loss_gain() - self.pay_once_total.unwrap_or(0)
+    }
+
+    pub fn ideal_total_gp(&self) -> i32 {
+        self.ideal_loss_gain() * self.number
+    }
+
     pub fn total_gp(&self) -> i32 {
-        self.profit * self.number
+        // Compensate for removing once
+        self.ideal_total_gp() - self.pay_once_total.unwrap_or(0)
     }
     pub fn gph(&self) -> i32 {
         #[allow(clippy::cast_possible_truncation, clippy::cast_precision_loss)]
@@ -131,7 +153,7 @@ impl OverviewRow {
     pub fn to_string_cells(&self) -> [String; OVERVIEW_NUM_HEADERS] {
         [
             self.name.clone(),
-            self.profit.to_comma_sep_string(),
+            self.loss_gain().to_comma_sep_string(),
             self.total_gp().to_comma_sep_string(),
             self.format_time_string(),
             self.gph().to_comma_sep_string(),
@@ -142,7 +164,7 @@ impl OverviewRow {
 
 pub type RecipeDetail = (String, i32, f32); // Item name, price, quantity
 impl DetailedTable {
-    pub fn new(overview: OverviewRow, inputs: Vec<RecipeDetail>, outputs: Vec<RecipeDetail>, percent_margin: f32) -> Self {
+    pub fn new(overview: OverviewRow, inputs: TableInputs, outputs: Vec<RecipeDetail>, percent_margin: f32) -> Self {
        Self {
            overview,
            inputs,

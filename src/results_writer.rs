@@ -2,10 +2,13 @@
 //! Implements traits from [`src/types.rs`]
 
 pub mod markdown {
-    use itertools::Itertools;
     use tracing::trace;
 
-    use crate::types::{DetailedTable, OverviewRow, RecipeDetail, ResultsTable, DETAILED_NUM_HEADERS, DETAILED_ROW_HEADERS, OVERVIEW_NUM_HEADERS, OVERVIEW_ROW_HEADERS};
+    use crate::types::{
+        DetailedTable, OverviewRow, ResultsTable, RecipeDetail,
+        DETAILED_NUM_HEADERS, DETAILED_ROW_HEADERS,
+        OVERVIEW_NUM_HEADERS, OVERVIEW_ROW_HEADERS
+    };
     use crate::helpers::ToCommaString;
 
     use std::io;
@@ -288,8 +291,9 @@ pub mod markdown {
     }
 
     impl DetailedRecipeLookup {
-        const NUM_SECTION_HEADERS: usize = 5;
+        const NUM_SECTION_HEADERS: usize = 6;
         const BASE_HEADERS: [(&str, Option<&str>); Self::NUM_SECTION_HEADERS] = [
+            ("Required Items", None),
             ("Inputs", None),
             ("Total", None),
             ("Outputs", None),
@@ -331,25 +335,26 @@ pub mod markdown {
         }
 
 
+        fn _format_quantity_string<const PREC: usize>(quantity: f32) -> String {
+            const ERROR_MARGIN: f64 = 1.0;
+
+            let quantity = quantity.to_owned();
+            let quantity_is_int = (f64::from(quantity as i32) - f64::from(quantity)).abs() < ERROR_MARGIN;
+            
+            if quantity_is_int {
+                (quantity as i32).to_comma_sep_string()  
+            } else { format!("{quantity:.PREC$}") } // TODO: 1 sig. fig. instead of decimal place
+        }
+
         fn push_input_rows(res: &mut Vec<[String; DETAILED_NUM_HEADERS]>, inputs: &Vec<RecipeDetail>, number_recipes: i32) {
+        // fn push_input_rows(res: &mut Vec<[String; DETAILED_NUM_HEADERS]>, inputs: &TableInputs, number_recipes: i32) {
             for (name, price, quantity) in inputs {
-                const ERROR_MARGIN: f64 = 1.0;
-
-                let quantity = quantity.to_owned();
-                let quantity_is_int = (f64::from(quantity as i32) - f64::from(quantity)).abs() < ERROR_MARGIN;
-                
-                let quantity_string = if quantity_is_int {
-                    (quantity as i32).to_comma_sep_string()  
-                } else { format!("{quantity:.1}") }; // TODO: 1 sig. fig. instead of decimal place
-
+                let quantity_string = DetailedRecipeLookup::_format_quantity_string::<1>(
+                    quantity.to_owned()
+                );
 
                 let total_quantity = number_recipes as f32 * quantity;
-                let total_quantity_is_int = (f64::from(total_quantity as i32) - f64::from(total_quantity)).abs() < ERROR_MARGIN;
-
-                let total_quantity_string = if total_quantity_is_int {
-                    (total_quantity as i32).to_comma_sep_string() 
-                } else { format!("{total_quantity:.1}") }; // Ditto
-
+                let total_quantity_string = DetailedRecipeLookup::_format_quantity_string::<1>(total_quantity);
 
                 let row = [
                     name.to_owned(),
@@ -366,38 +371,53 @@ pub mod markdown {
         }
 
         fn push_section_rows(res: &mut Vec<[String; DETAILED_NUM_HEADERS]>, section_headers: &[String; Self::NUM_SECTION_HEADERS],
-            current_internal_table: &DetailedTable) {
+            table: &DetailedTable) {
             const BLANK_LINE: [String;DETAILED_NUM_HEADERS] = [const{String::new()};DETAILED_NUM_HEADERS];
 
-            // Input items
             let mut header = BLANK_LINE;
-            header[0].clone_from(&section_headers[0]);
-            res.push(header);
+            if let Some(pay_once) = &table.inputs.pay_once {
+                // Required inputs (pay_once)
+                header[0].clone_from(&section_headers[0]);
+                res.push(header);
 
-            let number_recipe = current_internal_table.overview.number;
-            Self::push_input_rows(res, &current_internal_table.inputs, number_recipe);
+                // number_recipe = 1 since paying *once* for these items
+                Self::push_input_rows(res, pay_once, 1); 
+            }
 
-            // Inputs Total
-            header = BLANK_LINE;
-            header[0].clone_from(&section_headers[1]);
-            let single_input_price =  current_internal_table.inputs.iter()
-                .map(|(_,price,quantity)| (f64::from(*price) * f64::from(*quantity)) as i32).sum::<i32>();
-            header[4] = (single_input_price * number_recipe).to_comma_sep_string();
-            res.push(header);
+
+            let number_recipe = table.overview.number;
+            // Input items
+            if !table.inputs.inputs.is_empty() {
+                header = BLANK_LINE;
+                header[0].clone_from(&section_headers[1]);
+                res.push(header);
+
+                // Check if inputs is empty
+                Self::push_input_rows(res, &table.inputs.inputs, number_recipe);
+
+
+                // Inputs Total
+                header = BLANK_LINE;
+                header[0].clone_from(&section_headers[2]);
+                let single_input_price =  table.inputs.inputs.iter()
+                    .map(|(_,price,quantity)| (f64::from(*price) * f64::from(*quantity)) as i32).sum::<i32>();
+                header[4] = (single_input_price * number_recipe).to_comma_sep_string();
+                res.push(header);
+            };
 
             res.push(BLANK_LINE);
 
             // Outputs items
             header = BLANK_LINE;
-            header[0].clone_from(&section_headers[2]);
+            header[0].clone_from(&section_headers[3]);
             res.push(header);
 
-            Self::push_input_rows(res, &current_internal_table.outputs, number_recipe);
+            Self::push_input_rows(res, &table.outputs, number_recipe);
 
             // Outputs Total (Taxed)
             header = BLANK_LINE;
-            header[0].clone_from(&section_headers[3]);
-            let single_output_price =  current_internal_table.outputs.iter()
+            header[0].clone_from(&section_headers[4]);
+            let single_output_price =  table.outputs.iter()
                 .map(|(_,price,quantity)| (f64::from(*price) * f64::from(*quantity)) as i32).sum::<i32>();
             header[4] = (number_recipe * single_output_price).to_comma_sep_string();
             res.push(header);
@@ -406,11 +426,11 @@ pub mod markdown {
 
             // Profit/Loss
             header = [const{String::new()};DETAILED_NUM_HEADERS];
-            header[0].clone_from(&section_headers[4]);
-            header[3] = (current_internal_table.overview.total_gp() / current_internal_table.overview.number).to_comma_sep_string(); // i32 division
-            header[4] = current_internal_table.overview.total_gp().to_comma_sep_string();
-            header[5] = current_internal_table.overview.format_time_string();
-            header[6] = current_internal_table.overview.gph().to_comma_sep_string();
+            header[0].clone_from(&section_headers[5]);
+            header[3] = table.overview.ideal_loss_gain().to_comma_sep_string();
+            header[4] = table.overview.total_gp().to_comma_sep_string();
+            header[5] = table.overview.format_time_string();
+            header[6] = table.overview.gph().to_comma_sep_string();
             res.push(header);
 
         }
@@ -470,7 +490,7 @@ pub mod markdown {
             // Update prices of inputs/outputs to reflect price margin
 
             // Increase buy prices and decrease sell prices
-            table.inputs = Self::adjust_prices(&table.inputs, (1.0 + percent_margin/100.0).into());
+            table.inputs.inputs = Self::adjust_prices(&table.inputs.inputs, (1.0 + percent_margin/100.0).into());
             table.outputs = Self::adjust_prices(&table.outputs, (1.0 - percent_margin/100.0).into());
 
 
@@ -480,7 +500,7 @@ pub mod markdown {
 
             // Decrease number of recipe
             let input_cost_pm: i32 = DetailedTable::single_recipe_price(
-                &table.inputs
+                &table.inputs.inputs
             );
 
             // Current number is min(user_number_per_hour, effective_nph)
@@ -569,8 +589,9 @@ pub mod markdown {
         fn print_single_row_format() {
             let row = OverviewRow {
                 name: "Humidify Clay".to_string(),
+                pay_once_total: None,
                 profit: 375,
-                time_sec: 3.6,
+                time_sec: Some(3.6),
                 number: 1_571,
             };
             let formatter = OptimalOverview::default();

@@ -5,7 +5,7 @@ use crate::{
         item_search::{Item, ItemSearch},
         recipes::{Recipe, RecipeBook, RecipeTime},
     },
-    types::{DetailedTable, OverviewRow, SEC_IN_HOUR},
+    types::{DetailedTable, TableInputs, OverviewRow, SEC_IN_HOUR},
 };
 
 use std::collections::HashMap;
@@ -118,7 +118,8 @@ impl PriceHandle {
                 continue;
             }
 
-            let profit = overview.profit;
+            // let profit = overview.profit;
+            let profit = overview.loss_gain();
             let recipe_cost = cost;
 
             let cant_afford = coins < recipe_cost;
@@ -183,12 +184,16 @@ impl PriceHandle {
 
     pub fn recipe_lookup_from_recipe(&self, recipe: &Recipe) -> Option<DetailedTable> {
         // Need to parse item strings into Item objects
-        let input_items = self.parse_item_list(&recipe.inputs)?;
+        let pay_once_items: Option<Vec<_>> = recipe.inputs.pay_once.as_ref()
+            .and_then(|items| self.parse_item_list(items));
+        let input_items = self.parse_item_list(&recipe.inputs.inputs)?;
         let output_items = self.parse_item_list(&recipe.outputs)?;
 
         // HashMap[item -> (price, quantity)]
         // Base price
+        let pay_once_details = pay_once_items.map(|items| PriceHandle::item_list_prices_unchecked(items, true));
         let input_details = PriceHandle::item_list_prices_unchecked(input_items, true);
+
         let output_details = PriceHandle::item_list_prices_unchecked(output_items, false);
 
         let (overview, (_,_)) = self.recipe_price_overview_from_recipe(recipe)?;
@@ -196,16 +201,28 @@ impl PriceHandle {
         // Form table
         // Transform input/outputs to DetailedTable type
         // TODO: Switch DetailedTable input/outputs types to HashMap instead
+        let pay_once_vec = pay_once_details.map(|details|
+            details.into_iter()
+                .map(|(item, (price, quantity))| (item.name,price,quantity))
+                .collect()
+        );
         let input_vec = input_details.into_iter()
             .map(|(item, (price, quantity))| (item.name,price,quantity))
             .collect();
+
+        let table_inputs = TableInputs {
+            pay_once: pay_once_vec,
+            inputs: input_vec
+        };
+
+
         let output_vec = output_details.into_iter()
             .map(|(item, (price, quantity))| (item.name,price,quantity))
             .collect();
 
         let recipe_lookup: DetailedTable = DetailedTable::new(
             overview,
-            input_vec,
+            table_inputs,
             output_vec,
             self.pmargin,
         );
@@ -224,17 +241,32 @@ impl PriceHandle {
     #[allow(clippy::missing_panics_doc, reason = "infallible")]
     pub fn recipe_price_overview_from_recipe(&self, recipe: &Recipe) -> Option<(OverviewRow, (i32, i32))> {
         // Need to parse item strings into Item objects
-        let input_items = self.parse_item_list(&recipe.inputs)?;
+        // let pay_once_items  = self.parse_item_list(&recipe.inputs.pay_once.unwrap_or(default))?;
+        let pay_once_items: Option<Vec<_>> = recipe.inputs.pay_once.as_ref()
+            .and_then(|items| self.parse_item_list(items));
+        let input_items = self.parse_item_list(&recipe.inputs.inputs)?;
+
         let output_items = self.parse_item_list(&recipe.outputs)?;
 
+        let pay_once_details = pay_once_items.map(|items| PriceHandle::item_list_prices_unchecked(items, true));
         let input_details = PriceHandle::item_list_prices_unchecked(input_items, true);
         // assert!(!input_details.is_empty());
 
         let output_details = PriceHandle::item_list_prices_unchecked(output_items, false);
         assert!(!output_details.is_empty());
 
+
+        let pay_once_cost = pay_once_details.as_ref().map(|details|
+            PriceHandle::total_details_price(
+                &details.values().cloned().collect::<Vec<_>>()
+            )
+        );
+                
         let cost =
             PriceHandle::total_details_price(&input_details.into_values().collect::<Vec<_>>());
+
+
+
 
         let revenue = PriceHandle::apply_tax(PriceHandle::total_details_price(
             &output_details.into_values().collect::<Vec<_>>(),
@@ -266,6 +298,7 @@ impl PriceHandle {
 
         let overview = OverviewRow::new(
             recipe.name.clone(),
+            pay_once_cost,
             profit,
             time_sec,
             number
