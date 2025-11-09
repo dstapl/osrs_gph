@@ -1,10 +1,8 @@
 use osrs_gph::api::MappingItem;
 use osrs_gph::config::{self, load_config};
-use osrs_gph::file_io::{self, FileOptions, SerChoice};
+use osrs_gph::file_io::{self, FileOptions};
 use osrs_gph::log_match_panic;
 use std::collections::HashMap;
-use std::io::Read;
-use std::str::FromStr;
 
 
 
