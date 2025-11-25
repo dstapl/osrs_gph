@@ -19,6 +19,7 @@
 - [ ] Display name and reference name in `lookup_data\recipes.yaml` are not
   consistent with code logic. Fix logic so is the same as the original
   comment block.
+- [ ] Display which item (if any) is being capped by the buy-limit on `recipe_lookup`
 
 # Web migration
 - [ ] Create html/css(/js?) mockup
@@ -37,6 +38,7 @@
 # /bin/*
 
 ## Generate Lookups
+- [ ] Some bug with the key for `Maple longbow` appearing as `84` when running `generate lookups`
 
 ## Wiki pages
 - [ ] Auto-generate recipes from Wiki pages

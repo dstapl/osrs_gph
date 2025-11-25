@@ -12,17 +12,21 @@ use tracing::{instrument, trace, warn};
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct MappingItem {
-    #[serde(default)]
-    pub highalch: i32, // Non alchable
-    pub members: bool,
     pub name: String,
+    // #[serde(default)]
+    // pub highalch: i32, // Non alchable
+    pub members: bool,
     pub examine: String,
     pub id: i32,
-    #[serde(default)]
-    pub value: i32, // E.g., Sets have no value
+    // #[serde(default)]
+    pub value: Option<i32>, // E.g., Sets have no value
     pub icon: String,
-    #[serde(default)]
-    pub lowalch: i32,
+    // #[serde(default)]
+    // pub lowalch: i32,
+    // Max buy limit. Resets after 4 hours from first item being bought
+    pub limit: Option<i32>,
+    #[serde(flatten)]
+    pub alchable: Option<crate::item_search::item_search::Alchable>
 }
 
 #[derive(Debug, Clone, Copy)]

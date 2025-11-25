@@ -4,20 +4,31 @@ use super::data_types::latest::{self, PriceDataType, SPECIAL_ITEM_NAMES}; //::Pr
 
 use tracing::{debug, instrument, warn};
 
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, fmt::Debug, hash::Hash};
 
+use crate::api::MappingItem;
 use crate::config::FilePaths;
 use crate::file_io::{FileIO, FileOptions};
 use crate::item_search::data_types::latest::PriceDatum;
 use crate::{file_io, log_match_panic, log_panic};
 
 
+#[derive(Debug, Deserialize, Serialize, Clone)]
+pub struct Alchable {
+    pub highalch: i32,
+    pub lowalch: i32,
+}
+
 #[derive(Debug, Deserialize, Clone)]
 pub struct Item {
     pub name: String,    // TODO: Consider switching to &str if not needed.
     pub item_id: String, // i32
     pub item_prices: latest::PriceDatum,
+    // Extra information
+    pub alchable: Option<Alchable>,
+    pub limit: Option<i32>,
+    pub members: bool,
 }
 
 // Required by HashMaps
@@ -35,11 +46,15 @@ impl Hash for Item {
 }
 
 impl Item {
-    pub fn new(name: String, id: String, price_data: latest::PriceDatum) -> Self {
+    pub fn new(name: String, id: String, price_data: latest::PriceDatum,
+        alchable: Option<Alchable>, limit: Option<i32>, members: bool) -> Self {
         Self {
             name,
             item_id: id,
             item_prices: price_data,
+            alchable,
+            limit,
+            members
         }
     }
 
@@ -197,7 +212,7 @@ impl ItemSearch {
     }
 
 
-    fn add_special_values(&mut self) {
+    fn add_special_price_values(&mut self) {
         // Add special values
         const COIN_VALUE: i32 = 1;
         const START_TIME: i32 = 0;
@@ -209,17 +224,27 @@ impl ItemSearch {
             low_time: Some(START_TIME),
         };
 
-        let coins_datum = self.item_from_id_price("Coins".to_string(), coins_prices)
-            .expect("No ID found for `Coins`");
-        self.items.insert("Coins".to_string(), coins_datum); 
+        // let coins_datum = self.item_from_id_price("Coins".to_string(), coins_prices)
+        //     .expect("No ID found for `Coins`");
+        let coins_name = "Coins".to_owned();
+        let coins_id = self.id_from_name(&coins_name).expect("No ID found for `Coins`");
+        // let coins_datum = self.item_by_id(item_id)
+        let coins_item = Item::new(coins_name.clone(), coins_id.clone(), coins_prices,
+            None, None, false
+        );
+            
+        self.items.insert(coins_name, coins_item); 
     }
 
 
     #[instrument(level = "trace", skip(self, item_prices))]
     /// Update existing item price list with new entries
     /// Calls HashMap::extend
+    /// TODO(2): Currently this is only called once at the start of the program
+    ///     However it would duplicate items if called later on,
+    ///     from the self.items.insert(...) call
     pub fn update_item_prices(&mut self, item_prices: PriceDataType) {
-        // TODO: Impl Iterator or some trait so don't have to call data field
+        // TODO(1): Impl Iterator or some trait so don't have to call data field
         // self.items.extend(item_prices.data)
 
         for iprice in item_prices.data {
@@ -231,17 +256,50 @@ impl ItemSearch {
 
             let price_data = iprice.1;
 
-            let item = Item::new(name.clone(), id, price_data);
+            // TODO(2): Currently this provides a default value since the items
+            //  don't exist before this method is called
+            let item = Item::new(name.clone(), id, price_data,
+                None, // Alchable
+                None, // Limit
+                true, // Members
+            );
+
             self.items.insert(name, item);
         }
 
-        self.add_special_values();
+        self.add_special_price_values();
     }
 
 
-    fn item_from_id_price(&self, name: String, price: PriceDatum) -> Option<Item>{
-        let id = self.id_from_name(&name)?;
+    // Updates item information with extra info from the mapping file
+    //  e.g. Buy limits, alch values
+    pub fn update_item_extra_info(&mut self, mapping_path: String)
+        -> Result<(), std::io::Error> {
+        // Read in mapping file
+        let mut mapping_fio = file_io::FileIO::new(mapping_path,
+            FileOptions::new(true, true, true)
+        );
 
-        Some(Item::new(name, id.clone(), price))
+        let mapping_items: HashMap<String, MappingItem> = mapping_fio
+            .read_serialized(file_io::SerChoice::YAML)?;
+
+
+        // Iterate over key-values and update items
+        for (name, lookup_item) in self.items.iter_mut() {
+            let Some(item) = mapping_items.get(name) else {
+                unreachable!("{}",
+                    &format!(r#"
+                    Mapping file or Price file must have changed during program runtime.
+                    Could not find price data for {name}"#)
+                );
+            };
+            
+            // Update item information
+            (*lookup_item).alchable = item.alchable.clone();
+            (*lookup_item).limit = item.limit;
+            (*lookup_item).members = item.members;
+
+        }
+        Ok(())
     }
 }

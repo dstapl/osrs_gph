@@ -84,6 +84,12 @@ fn main() {
     // Populate with items (from_file)
     let item_prices = item_search.get_item_prices(true);
     item_search.update_item_prices(item_prices);
+    let mapping_path = conf.filepaths.lookup_data.api_mapping.clone();
+    log_match_panic(
+        item_search.update_item_extra_info(mapping_path),
+        "Updated items with extra information",
+        "Failed to update items with extra information",
+    );
 
     trace!(desc = "After update_item_prices");
     // Check important items exist in memory
