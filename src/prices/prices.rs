@@ -184,6 +184,7 @@ impl PriceHandle {
 
     pub fn recipe_lookup_from_recipe(&self, recipe: &Recipe) -> Option<DetailedTable> {
         // Need to parse item strings into Item objects
+        // debug!(desc = "Parsing recipe lookup", name = &recipe.name);
         let pay_once_items: Option<Vec<_>> = recipe.inputs.pay_once.as_ref()
             .and_then(|items| self.parse_item_list(items));
         let input_items = self.parse_item_list(&recipe.inputs.inputs)?;
@@ -223,7 +224,7 @@ impl PriceHandle {
         let recipe_lookup: DetailedTable = DetailedTable::new(
             overview,
             table_inputs,
-            output_vec,
+            output_vec, // Not taxed
             self.pmargin,
         );
 
@@ -242,6 +243,7 @@ impl PriceHandle {
     pub fn recipe_price_overview_from_recipe(&self, recipe: &Recipe) -> Option<(OverviewRow, (i32, i32))> {
         // Need to parse item strings into Item objects
         // let pay_once_items  = self.parse_item_list(&recipe.inputs.pay_once.unwrap_or(default))?;
+        // debug!(desc = "Parsing recipe overview", name = &recipe.name);
         let pay_once_items: Option<Vec<_>> = recipe.inputs.pay_once.as_ref()
             .and_then(|items| self.parse_item_list(items));
         let input_items = self.parse_item_list(&recipe.inputs.inputs)?;
@@ -258,21 +260,22 @@ impl PriceHandle {
 
         let pay_once_cost = pay_once_details.as_ref().map(|details|
             PriceHandle::total_details_price(
-                &details.values().cloned().collect::<Vec<_>>()
+                &details.values().cloned().collect::<Vec<_>>(),
+                false
             )
         );
-                
-        let cost =
-            PriceHandle::total_details_price(&input_details.into_values().collect::<Vec<_>>());
 
 
-
-
-        let revenue = PriceHandle::apply_tax(PriceHandle::total_details_price(
+        let revenue = PriceHandle::total_details_price(
             &output_details.into_values().collect::<Vec<_>>(),
-        ));
-
+            true
+        );
+        let cost = PriceHandle::total_details_price(
+            &input_details.into_values().collect::<Vec<_>>(),
+            false
+        );
         let profit = revenue - cost;
+
 
         let time_ticks = recipe.ticks.clone();
         // Return None from function if Invalid
@@ -312,28 +315,36 @@ impl PriceHandle {
         // Update to 2% tax 2025-05-29
         // https://oldschool.runescape.wiki/w/Grand_Exchange#Convenience_fee_and_item_sink
         if profit < 50 {
-            profit
-        } else {
-            const TAX_PERCENT: f64 = 2.0;
-            const FEE_CAP: i32 = 5_000_000;
+            return profit;
+        };
+        
+        const TAX_PERCENT: f64 = 2.0;
+        const FEE_CAP: i32 = 5_000_000;
 
-            #[allow(clippy::cast_possible_truncation)]
-            // SAFETY: original values and multiplication are within i32 limit
-            let untaxed = (f64::from(profit) * TAX_PERCENT / 100.0).floor() as i32;
-            let tax: i32 = FEE_CAP.min(untaxed);
+        #[allow(clippy::cast_possible_truncation)]
+        // SAFETY: original values and multiplication are within i32 limit
+        let untaxed = (f64::from(profit) * TAX_PERCENT / 100.0).floor() as i32;
+        let tax: i32 = FEE_CAP.min(untaxed);
 
-            profit - tax
-        }
+        profit - tax
     }
 
     #[allow(clippy::cast_precision_loss)]
-    pub fn total_details_price(price_details: &[(i32, f32)]) -> i32 {
+    pub fn total_details_price(price_details: &[(i32, f32)], apply_tax: bool) -> i32 {
         // total price for each item is price * quantity
-        let total: f32 = price_details.iter().map(|t| t.0 as f32 * t.1).sum();
-
+        let price_totals = price_details.iter().map(|t| f64::from(t.0) * f64::from(t.1));
+        
         #[allow(clippy::cast_possible_truncation)]
-        // TODO: Max size of i32 < f32
-        return total.floor() as i32
+        return if apply_tax {
+            price_totals.map(|f| f as i32)
+                .map(PriceHandle::apply_tax)
+                .sum::<i32>()
+        } else {
+            price_totals.sum::<f64>().floor() as i32
+        }
+
+        // // SAFETY: Max size of i32 < f64
+        // return total.floor() as i32
     }
 
     #[allow(clippy::cast_precision_loss)]

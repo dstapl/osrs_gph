@@ -103,9 +103,10 @@ pub enum OverviewSortBy {
 }
 
 /// TODO: Enum name and serde renames
-#[derive(Enum, Deserialize, Debug)]
+#[derive(Enum, Default, Deserialize, Debug, Hash, PartialEq, Eq)]
 pub enum OverviewFilter {
     #[serde(rename = "must_profit")]
+    #[default]
     MustProfit,
     #[serde(rename = "show_hidden")]
     ShowHidden,
@@ -113,7 +114,8 @@ pub enum OverviewFilter {
     Reverse,
 }
 
-#[derive(Deserialize, Debug)]
+// Custom deserialize defined later
+#[derive(Debug)]
 pub struct Display {
     pub number: u32,
     pub lookup: LookupOptions,
@@ -350,8 +352,83 @@ where
 }
 
 
+// Implement custom deserializers
 use serde::{de::Visitor, Deserializer};
 use std::fmt;
+
+// #[derive(Deserialize, Debug)]
+// pub struct Display {
+//     pub number: u32,
+//     pub lookup: LookupOptions,
+//     pub sort_by: OverviewSortBy,
+//     pub filters: EnumMap<OverviewFilter, bool>,
+//     pub membership: Membership,
+// }
+impl<'de> Deserialize<'de> for Display {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+        where
+            D: Deserializer<'de> {
+        
+        struct DisplayVisitor;
+
+        impl<'de> Visitor<'de> for DisplayVisitor {
+            type Value = Display;
+
+            fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+                // formatter.write_str("four fields containting values/nones: i32,u32,i32,u32.")
+                formatter
+                    .write_str(r#"
+A u32 for the (maximum) `number` of methods to display
+A LookupOptions for `lookup`
+An OverviewSortBy for `sort_by`
+Up to 3 fields of bool corresponding to whether each of the display `filters` is enabled.
+A bool to show if methods requiring `membership` should be shown.
+                    "#)
+            }
+
+            fn visit_map<A>(self, mut map: A) -> Result<Self::Value, A::Error>
+            where
+                A: serde::de::MapAccess<'de>,
+            {
+                let (_, number) = map.next_entry::<String, u32>()?
+                    .expect("Failed to deserialize `number`");
+
+                let (_, lookup) = map.
+                    next_entry::<String, LookupOptions>()?
+                    .expect("Failed to deserialize lookup options");
+
+                let (_, sort_by) = map
+                    .next_entry::<String, OverviewSortBy>()?
+                    .expect("Failed to deserialize sort-by options");
+
+                let mut filter_map = EnumMap::<OverviewFilter, bool>::default(); // all false
+                // Do map deserialization manually since some keys might be missing
+                let (_, config_filters) = map
+                    .next_entry::<String, HashMap<OverviewFilter, bool>>()?
+                    .expect("Failed to deserialize filter_map");
+                // Override with user option
+                for (filter, enabled) in config_filters {
+                   filter_map[filter] = enabled; 
+                };
+
+                let (_, membership) = map.next_entry::<String, Membership>()?
+                    .expect("Failed to deserialize membership");
+
+                let final_display = Display {
+                    number,
+                    lookup,
+                    sort_by,
+                    filters: filter_map,
+                    membership
+                };
+
+                Ok(final_display)
+            }
+        }
+        deserializer.deserialize_map(DisplayVisitor)
+    }
+}
+
 impl<'de> Deserialize<'de> for Levels {
     // #[inline]
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>

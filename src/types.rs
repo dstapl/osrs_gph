@@ -137,8 +137,8 @@ impl OverviewRow {
             self.total_gp() // Per hour already
         } else {
             (
-                f32::from(SEC_IN_HOUR) * self.profit as f32
-                / unsafe { self.time_sec.unwrap_unchecked() }
+                f64::from(SEC_IN_HOUR) * self.profit as f64
+                / f64::from(unsafe { self.time_sec.unwrap_unchecked() })
             ).floor() as i32
         }
     }
