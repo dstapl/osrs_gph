@@ -4,14 +4,7 @@
 use std::collections::HashMap;
 
 use osrs_gph::{
-    api::Api,
-    config,
-    file_io::{FileIO, FileOptions},
-    item_search::recipes::RecipeBook,
-    log_match_panic, check_items_exists,
-    prices::prices::PriceHandle,
-    results_writer::markdown::{DetailedRecipeLookup, OptimalOverview},
-    types::{DetailedTable, ResultsTable, DETAILED_NUM_HEADERS, OVERVIEW_NUM_HEADERS},
+    api::Api, check_items_exists, config::{self, OverviewFilter}, file_io::{FileIO, FileOptions}, item_search::recipes::RecipeBook, log_match_panic, prices::prices::PriceHandle, results_writer::markdown::{DetailedRecipeLookup, OptimalOverview}, types::{DetailedTable, ResultsTable, DETAILED_NUM_HEADERS, OVERVIEW_NUM_HEADERS}
 };
 use tracing::{info, span, trace, warn, Level};
 
@@ -23,11 +16,14 @@ struct Cli {
     /// Refresh prices or not
     #[clap(short = 'r', long, action = ArgAction::SetTrue)]
     refresh: bool,
+
+    #[clap(short = 's', long = "show-hidden", action = ArgAction::SetTrue)]
+    show_hidden: bool,
 }
 
 
 fn main() {
-    let conf: config::Config = config::load_config("config.yaml");
+    let mut conf: config::Config = config::load_config("config.yaml");
 
     // Level:: ERROR, INFO, TRACE
     // Span levels are akin to the event levels:
@@ -71,6 +67,12 @@ fn main() {
             println!("{msg}");
         }
     }
+
+    trace!(desc = "Handling show-hidden flag");
+    let show_hidden: bool = cli.show_hidden;
+    trace!(show_hidden = show_hidden);
+
+    conf.display.filters[OverviewFilter::ShowHidden] = show_hidden;
 
     // Create item search
     let mut item_search = osrs_gph::item_search::item_search::ItemSearch::new(

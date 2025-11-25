@@ -48,11 +48,12 @@ display:
   lookup: # For recipe_lookup.md
     # Number of entries from optimal_overview to lookup in recipe_lookup
     # (0 == None / Disabled)
-    top: 2
+    top: 3
     # Specific entries which might not be in the top bracket
     specific:
-      - Ruby Necklaces
-      - Ruby Necklaces then HA
+      # - Ruby Necklaces
+      # - Ruby Necklaces then HA
+      # - Catching tuna & swordfish (F2P)
 
   # name, profit, time, gph, custom
   sort_by: profit
@@ -60,11 +61,11 @@ display:
   # Filtering results (Backend)
   filters:
     must_profit: true
-    show_hidden: false
+    # show_hidden: true
     reverse: false
 
   # Only show results from: f2p, p2p, both
-  membership: f2p
+  membership: p2p
   
 
 levels:
@@ -97,3 +98,4 @@ levels:
     runecraft: 59
     hunter: 59
     construction: 57
+    sailing: 1
