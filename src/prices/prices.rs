@@ -258,6 +258,25 @@ impl PriceHandle {
         assert!(!output_details.is_empty());
 
 
+        // Minimum of (max_buy_limit / item_number_in_recipe) for all inputs
+        // dbg!(&input_details);
+        let limit_number: i32 = if input_details.is_empty() {
+            i32::MAX // No input items required
+        } else {
+            (&input_details).iter()
+            .map(|(item, (_, quantity))| {
+                let Some(buy_limit) = item.limit else {
+                    return i32::MAX;
+                };
+
+                (f64::from(buy_limit)/f64::from(*quantity))
+                    .floor() as i32
+            })
+            .min()
+            .expect("Reference to input details is an empty iterator")
+        };
+
+
         let pay_once_cost = pay_once_details.as_ref().map(|details|
             PriceHandle::total_details_price(
                 &details.values().cloned().collect::<Vec<_>>(),
@@ -298,6 +317,11 @@ impl PriceHandle {
 
         // One or more of time or user_number_per_hour is set
         let number = update_recipe_number(user_number_per_hour, self.coins, cost);
+        
+
+        // Update number based on the price limits of each item
+        // Buy limits reset every 4 hours
+        let number = number.min(limit_number/4).max(1);
 
         let overview = OverviewRow::new(
             recipe.name.clone(),
@@ -382,6 +406,8 @@ impl PriceHandle {
     /// # Panics
     /// When item price does not exist.
     /// true means buy, false means sell
+    /// # Returns
+    /// HashMap (Item, (Price, Quantity))
     pub fn item_list_prices_unchecked<I: IntoIterator<Item = (Item, f32)>>(
         item_list: I,
         price_type: bool,

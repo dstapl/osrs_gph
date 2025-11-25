@@ -50,14 +50,16 @@ fn main() {
 
     // Add special currencies into mapping
     let coins = MappingItem{
-        highalch: i32::default(),
         members: false,
         name: "Coins".to_string(),
         examine: "Lovely money!".to_string(),
         id: 995, // Basic Coins
-        value: 1,
+        value: Some(1),
         icon: "https://oldschool.runescape.wiki/images/thumb/Coins_detail.png/240px-Coins_detail.png".to_string(),
-        lowalch: i32::default(),
+        limit: None,
+        // highalch: None
+        // lowalch: None,
+        alchable: None
     };
 
     let special_items: Vec<serde_json::Value> = serde_json::from_str(
@@ -71,17 +73,25 @@ fn main() {
     // Concatenate
     mapping_value.extend(special_items);
 
+    // Convert to YAML
+    trace!(desc = "Re-/serialising mapping into YAML");
+    mapping_text = serde_yaml_ng::to_string(&mapping_value)
+        .expect("Failed to convert JSON into YAML");
+    let mapping: Vec<MappingItem> = serde_yaml_ng::from_str(&mapping_text).expect("Failed to serialise mapping_text into YAML");
+
+
+    // Format and write to mapping file
+    let mapping_hashmap: HashMap<&String, &MappingItem> = 
+        mapping.iter()
+        .map(|item| (&item.name, item))
+        .collect::<HashMap<_,_>>();
     trace!(desc = "Writing mapping to file");
     log_match_panic(
-        mapping_fio.write_serialized(&mapping_value),
+        mapping_fio.write_serialized(&mapping_hashmap),
         &format!("Reading mapping file {mapping_path_str}"),
         &format!("Failed to parse mapping {mapping_path_str}"),
     );
-    mapping_text = serde_yaml_ng::to_string(&mapping_value)
-        .expect("Failed to convert JSON into YAML");
-        
-    trace!(desc = "Re-/serialising mapping into YAML");
-    let mapping: Vec<MappingItem> = serde_yaml_ng::from_str(&mapping_text).expect("Failed to serialise mapping_text into YAML");
+    
 
     // Split mapping into id_to_name and name_to_id
     let id_to_name_str: String = config.filepaths.lookup_data.id_to_name;

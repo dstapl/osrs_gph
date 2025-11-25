@@ -1,6 +1,8 @@
 # Template: # Reference name
 #   name: "Template" # Display name (Not necessarily same as reference)
+#   number_per_hour: 1 # Number of times you can perform this method per hour
 #   members: false # Whether this method requires membership or not
+#   pay_once: {} # Inputs to pay once every `number` times: e.g, entrance fee
 #   inputs: {}
 #   outputs: {}
 #   time: 1  # Measured in ticks
@@ -17,6 +19,8 @@ Ruby rings:
 Ruby necklaces:
   name: "Ruby Necklaces"
   members: false
+  pay_once:
+    Coins: 10000
   number_per_hour: 1040
   inputs:
     Gold bar: 1
@@ -542,9 +546,11 @@ Cooking raw karambwan:
 Catching tuna \& swordfish (F2P):
   name: "Catching tuna & swordfish (F2P)"
   members: false
-  number_per_hour: 1
-  inputs:
+  pay_once:
     Coins: 480
+  number_per_hour: 1
+  # inputs:
+  #   Coins: 480
   outputs:
     Raw swordfish: 78
     Raw tuna: 117
@@ -553,7 +559,6 @@ Stealing valuables:
   members: true
   # number_per_hour: 14 houses / hour
   number_per_hour: 1
-  inputs:
   outputs:
     # TODO: Current data is for 14 houses over an hour
     #   Change to 1 house loot avg
@@ -706,3 +711,55 @@ Grinding chocolate bars (manual):
   outputs:
     Chocolate dust: 1
   time: 1 # 0-tick but add delays/tired
+# All Cannonballs
+# Number per hour ~540 - 600 using PRE-SAILING forges
+#   and double ammo mould
+Smithing Steel Cannonballs:
+  name: "Smithing Steel cannonballs"
+  members: true
+  inputs:
+    Steel bar: 2
+  outputs:
+    Steel cannonball: 8
+  number_per_hour: 580
+Smithing Rune Cannonballs:
+  name: "Smithing Rune cannonballs"
+  members: true
+  inputs:
+    Rune bar: 2
+  outputs:
+    Rune cannonball: 8
+  number_per_hour: 580
+Smithing Mithril Cannonballs:
+  name: "Smithing Mithril cannonballs"
+  members: true
+  inputs:
+    Mithril bar: 2
+  outputs:
+    Mithril cannonball: 8
+  number_per_hour: 580
+Smithing Bronze Cannonballs:
+  name: "Smithing Bronze cannonballs"
+  members: true
+  inputs:
+    Bronze bar: 2
+  outputs:
+    Bronze cannonball: 8
+  number_per_hour: 580
+Smithing Iron Cannonballs:
+  name: "Smithing Iron cannonballs"
+  members: true
+  inputs:
+    Iron bar: 2
+  outputs:
+    Iron cannonball: 8
+  number_per_hour: 580
+Smithing Adamantite Cannonballs:
+  name: "Smithing Adamantite cannonballs"
+  members: true
+  inputs:
+    Adamantite bar: 2
+  outputs:
+    Adamantite cannonball: 8
+  number_per_hour: 580
+
