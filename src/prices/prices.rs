@@ -34,25 +34,38 @@ pub struct PriceHandle {
 use crate::types::SECOND_PER_TICK;
 
 
-pub fn update_recipe_number(number_per_hour: Option<i32>, coins: i32, cost: i32) -> i32 {
-    let number = {
-        let user_number = number_per_hour.unwrap_or(i32::MAX);
-
-    if cost == 0 {
-        if user_number == i32::MAX {
-            warn!(desc = "Infinite number for recipe");
-        }
-        user_number
-    } else {
-        let effective_number: i32 = coins / cost;
-        // Minimum number of the two
-        effective_number.min(user_number)
-    }
+pub fn update_recipe_number(number_per_hour: Option<i32>, coins: i32, single_cost: i32) -> i32 {
+    assert!(single_cost >= 0, "Cost of recipe is negative?");
     
-    };
+    let number_per_hour = number_per_hour.unwrap_or(i32::MAX);
+    if single_cost == 0 {
+        return if number_per_hour == i32::MAX { i32::MAX }
+            else { number_per_hour.max(1) };
+    }
 
-    number.max(1)
+    // Estimate the total number possible from given coins
+    let effective_max_from_coins: i32 = coins / single_cost;
+    // Return hourly figure if there are no requirements for the recipe
+    if number_per_hour == i32::MAX { return effective_max_from_coins.max(1); }
 
+
+    // Calculate the highest number of hours as a multiple of number_per_hour
+    let cost_per_hour_i64: i64 = (single_cost as i64).saturating_mul(number_per_hour as i64);
+    let coins_i64 = coins as i64;
+    let single_cost_i64 = single_cost as i64;
+
+    let full_hours = coins_i64.saturating_div(cost_per_hour_i64);
+    let mut total_number = (full_hours as i32).saturating_mul(number_per_hour);
+
+    // Calculate any fractional time lost through integer truncation
+    let remainder_time = coins_i64.saturating_sub(full_hours.saturating_mul(cost_per_hour_i64));
+    if remainder_time >= single_cost_i64 {
+        let extra_time = remainder_time.saturating_div(single_cost_i64) as i32;
+        total_number = total_number.saturating_add(extra_time);
+    }
+
+    total_number.min(effective_max_from_coins)
+        .max(1)
 }
 
 impl PriceHandle {
@@ -236,7 +249,36 @@ impl PriceHandle {
         self.recipe_price_overview_from_recipe(recipe)
     }
 
+    
+    fn calculate_buy_limit_item(input_details: &HashMap<Item, (i32, f32)>)
+        -> Option<(Item, i32)> {
+        if input_details.is_empty() {
+            return None // No input items required
+        };
 
+        let mut limit_item_number: Option<(Item, i32)> = None;
+
+        for (item, (_, quantity)) in input_details {
+            let buy_limit = item.limit.unwrap_or(i32::MAX);
+
+            let number = 
+                (f64::from(buy_limit)/f64::from(*quantity))
+                .floor() as i32;
+
+            match limit_item_number.as_mut() {
+                // Initialise value
+                None => limit_item_number = Some((item.to_owned(), number)),
+                // Update if the number is smaller
+                Some((limit_item, limit_number)) => if &number < limit_number {
+                    *limit_item = item.to_owned();
+                    *limit_number = number;
+                }
+            };
+
+        };
+
+        return limit_item_number;
+    }
 
     /// Returns price overview and cost of inputs and (taxed) revenue from outputs
     #[allow(clippy::missing_panics_doc, reason = "infallible")]
@@ -259,22 +301,9 @@ impl PriceHandle {
 
 
         // Minimum of (max_buy_limit / item_number_in_recipe) for all inputs
-        // dbg!(&input_details);
-        let limit_number: i32 = if input_details.is_empty() {
-            i32::MAX // No input items required
-        } else {
-            (&input_details).iter()
-            .map(|(item, (_, quantity))| {
-                let Some(buy_limit) = item.limit else {
-                    return i32::MAX;
-                };
-
-                (f64::from(buy_limit)/f64::from(*quantity))
-                    .floor() as i32
-            })
-            .min()
-            .expect("Reference to input details is an empty iterator")
-        };
+        let item_limit_number = PriceHandle::calculate_buy_limit_item(
+            &input_details
+        );
 
 
         let pay_once_cost = pay_once_details.as_ref().map(|details|
@@ -307,27 +336,59 @@ impl PriceHandle {
         // Stay None if time_sec is undefined
         let user_number_per_hour = recipe.number_per_hour;
 
-        if time_sec.is_none() {
+
+        // TODO(1): Choice to include this calculation or not? When None.
+        // Would simplify logic a lot, since only considering f64 not Option<f64>
+        let mut effective_time_sec: Option<f64> = None;
+
+        if time_sec.is_some() { effective_time_sec = time_sec.map(f64::from) }
+        else { // None
             debug!(desc = "RecipeTime is not set.", name = %recipe.name);
             if user_number_per_hour.is_none() {
                 warn!(desc = "RecipeTime AND number_per_hour are not set.", name = %recipe.name);
-                return None; // No valid values for number
+                return None; // No valid values for calculating time so exit function
             };
+
+            // Otherwise override effective_time_sec with user_number calculation
+            let user_eff_time = 60.0f64 * 60.0f64 / f64::from(user_number_per_hour.expect("Just checked user_number_per_hour is not none...?"));
+            effective_time_sec = Some(match effective_time_sec {
+                None => user_eff_time,
+                Some(time) => time.max(user_eff_time)
+            });
         };
 
-        // One or more of time or user_number_per_hour is set
-        let number = update_recipe_number(user_number_per_hour, self.coins, cost);
-        
 
-        // Update number based on the price limits of each item
-        // Buy limits reset every 4 hours
-        let number = number.min(limit_number/4).max(1);
+
+        // One or more of time or user_number_per_hour is set
+        let mut number = update_recipe_number(user_number_per_hour, self.coins, cost);
+
+        if let Some((item, limit_number)) = item_limit_number {
+            if limit_number < number {
+                debug!(
+                    recipe = &recipe.name,
+                    item_limiter = &item.name,
+                    limit = &limit_number
+                );
+
+
+                // Update number since restricted by buy limit
+                number = limit_number;
+            }
+        }
+        number = number.max(1);
+
+        let overview_single_time = effective_time_sec.map(|f| f as f32);
+        let time_hours = &overview_single_time.map(|t| t/(60.0f32 * 60.0f32));
+        if time_hours.is_some_and(|t| f64::from(t)*f64::from(number) < 0.01) {
+            dbg!(&time_sec, &effective_time_sec, &overview_single_time, &number, &time_hours.map(|t| f64::from(t)*f64::from(number)), &recipe.name);
+        }
 
         let overview = OverviewRow::new(
             recipe.name.clone(),
             pay_once_cost,
             profit,
-            time_sec,
+            // effective_time_sec.map(|f| f as f32),
+            overview_single_time,
             number
         );
 

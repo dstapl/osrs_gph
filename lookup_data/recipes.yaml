@@ -148,7 +148,7 @@ Humidify clay:
     Clay: 27
   outputs:
     Soft clay: 27
-  time: 6
+  time: 3
 Enchanting dragonstone jewellery (Manual):
   name: "Enchanting dragonstone jewellery (Manual)"
   members: true
@@ -605,8 +605,8 @@ Cooking raw anchovies:
   outputs:
     Anchovies: 1
   time: 5
-Poisoning dragon arrow:
-  name: "Poisoning dragon arrow"
+Poisoning dragon arrow(++):
+  name: "Poisoning dragon arrow(++)"
   members: true
   inputs:
     Weapon poison(++): 1
@@ -614,8 +614,8 @@ Poisoning dragon arrow:
   outputs:
     Dragon arrow(p++): 5
   time: 1
-Poisoning amethyst arrow:
-  name: "Poisoning amethyst arrow"
+Poisoning amethyst arrow(++):
+  name: "Poisoning amethyst arrow(++)"
   members: true
   inputs:
     Weapon poison(++): 1
@@ -623,14 +623,68 @@ Poisoning amethyst arrow:
   outputs:
     Amethyst arrow(p++): 5
   time: 1
-Poisoning dragon dart:
-  name: "Poisoning dragon dart"
+Poisoning dragon dart(++):
+  name: "Poisoning dragon dart(++)"
   members: true
   inputs:
     Weapon poison(++): 1
     Dragon dart: 5
   outputs:
     Dragon dart(p++): 5
+  time: 1
+Poisoning dragon arrow(+):
+  name: "Poisoning dragon arrow(+)"
+  members: true
+  inputs:
+    Weapon poison(+): 1
+    Dragon arrow: 5
+  outputs:
+    Dragon arrow(p+): 5
+  time: 1
+Poisoning amethyst arrow(+):
+  name: "Poisoning amethyst arrow(+)"
+  members: true
+  inputs:
+    Weapon poison(+): 1
+    Amethyst arrow: 5
+  outputs:
+    Amethyst arrow(p+): 5
+  time: 1
+Poisoning dragon dart(+):
+  name: "Poisoning dragon dart(+)"
+  members: true
+  inputs:
+    Weapon poison(+): 1
+    Dragon dart: 5
+  outputs:
+    Dragon dart(p+): 5
+  time: 1
+Poisoning dragon arrow:
+  name: "Poisoning dragon arrow"
+  members: true
+  inputs:
+    Weapon poison: 1
+    Dragon arrow: 5
+  outputs:
+    Dragon arrow(p): 5
+  time: 1
+Poisoning amethyst arrow:
+  name: "Poisoning amethyst arrow"
+  members: true
+  inputs:
+    Weapon poison: 1
+    Amethyst arrow: 5
+  outputs:
+    Amethyst arrow(p): 5
+  time: 1
+Poisoning dragon dart:
+  name: "Poisoning dragon dart"
+  members: true
+  inputs:
+    Weapon poison: 1
+    Dragon dart: 5
+  outputs:
+    Dragon dart(p): 5
   time: 1
 Making planks:
   name: "Making planks"
