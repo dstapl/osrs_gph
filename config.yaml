@@ -26,7 +26,7 @@ filepaths:
 
 profit:
   # Underscores are removed from strings
-  coins: 1_500_000
+  coins: 3_000_000
   percent_margin: 1.5 # buy +%, sell -% -> overall diff 2*%
 
   custom_weights: # Only if `custom` is selected in display.sort_by
@@ -51,9 +51,9 @@ display:
     top: 3
     # Specific entries which might not be in the top bracket
     specific:
-      # - Ruby Necklaces
-      # - Ruby Necklaces then HA
-      # - Catching tuna & swordfish (F2P)
+      - Humidify Clay
+      - Casting Tan Leather (Black d'hide)
+      - Smithing Mithril cannonballs
 
   # name, profit, time, gph, custom
   sort_by: profit
