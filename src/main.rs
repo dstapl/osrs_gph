@@ -31,12 +31,13 @@ struct Cli {
 
 
 fn main() {
+    // Level:: ERROR, INFO, TRACE
+    const LOG_LEVEL: Level = Level::TRACE;
+
     let mut conf: config::Config = config::load_config("config.yaml");
 
-    // Level:: ERROR, INFO, TRACE
     // Span levels are akin to the event levels:
     //     too high and will revert to default guard instead of the span
-    const LOG_LEVEL: Level = Level::TRACE;
     let subscriber = osrs_gph::make_subscriber(conf.filepaths.main_log_file.clone(), LOG_LEVEL);
 
     let _crateguard = tracing::subscriber::set_default(subscriber);
@@ -62,18 +63,15 @@ fn main() {
     trace!(refresh = choice);
 
     // Referesh API prices
-    match choice {
-        true => {
-            let msg = "Retrieving prices from API.";
-            info!(desc = msg);
-            println!("{msg}");
-            request_new_prices_from_api(&conf.api, &mut file);
-        }
-        false => {
-            let msg = "Loading previous data instead.";
-            info!(desc = msg);
-            println!("{msg}");
-        }
+    if choice {
+        let msg = "Retrieving prices from API.";
+        info!(desc = msg);
+        println!("{msg}");
+        request_new_prices_from_api(&conf.api, &mut file);
+    } else {
+        let msg = "Loading previous data instead.";
+        info!(desc = msg);
+        println!("{msg}");
     }
 
     trace!(desc = "Handling show-hidden flag");
@@ -86,9 +84,10 @@ fn main() {
 
     trace!(desc = "Handling max-hours flag");
     // Override config with new value
-    conf.display.time_type = match cli.number_hours {
-        false => TimeType::MaxHours,
-        true => TimeType::SingleHour,
+    conf.display.time_type = if cli.number_hours {
+        TimeType::SingleHour
+    } else {
+        TimeType::MaxHours
     };
     let time_type = conf.display.time_type;
     trace!(time_type = ?conf.display.time_type);
@@ -235,7 +234,7 @@ fn main() {
         writer.write_all_tables(&mut file),
         "Wrote all recipe lookups to file",
         "Failed to write all recipe tables",
-    )
+    );
 }
 
 fn request_new_prices_from_api(api_settings: &config::Api, file: &mut FileIO) {

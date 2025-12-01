@@ -1,19 +1,21 @@
+use std::collections::HashMap;
+
 use osrs_gph::api::MappingItem;
 use osrs_gph::config::{self, load_config};
 use osrs_gph::file_io::{self, FileOptions};
 use osrs_gph::log_match_panic;
-use std::collections::HashMap;
 
-
-
-use serde_json;
 use tracing::{debug, span, trace, Level};
 
+
 fn main() {
+    const LOG_LEVEL: Level = Level::TRACE;
+    const USER_AGENT: &str =
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X x.y; rv:42.0) Gecko/20100101 Firefox/42.0";
+
     let config_file_name = "config.yaml";
     let config: config::Config = load_config(config_file_name);
 
-    const LOG_LEVEL: Level = Level::TRACE;
     let subscriber = osrs_gph::make_subscriber(config.filepaths.bin_log_file.clone(), LOG_LEVEL);
 
     let _crateguard = tracing::subscriber::set_default(subscriber);
@@ -24,13 +26,11 @@ fn main() {
     trace!(desc = "Building reqwest client");
     // Get new mapping file
     let client = reqwest::blocking::Client::new();
-    let user_agent: &str =
-        "Mozilla/5.0 (Macintosh; Intel Mac OS X x.y; rv:42.0) Gecko/20100101 Firefox/42.0";
 
     trace!(desc = "Sending API request");
     let mut mapping_text: String = client
         .get(config.api.url + "/mapping")
-        .header(reqwest::header::USER_AGENT, user_agent)
+        .header(reqwest::header::USER_AGENT, USER_AGENT)
         .send().expect("Failed to send API request")
         // TODO: Hopefully this won't get too big to fit in memory...
         .text().expect("Failed to parse text of response");

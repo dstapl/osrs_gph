@@ -48,6 +48,9 @@ impl<'a> From<scraper::error::SelectorErrorKind<'a>> for HTMLError<'a> {
 }
 
 fn retrieve_webpage<'a, S: IntoUrl>(url: S, overwrite: bool) -> Result<String, Errors<'a>> {
+    const USER_AGENT: &str =
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X x.y; rv:42.0) Gecko/20100101 Firefox/42.0";
+
     // Check if exists as a file already
     let path: &Path = Path::new("src\\bin\\wiki_info\\Money_making_guide.html");
     let read_from_file: bool = path.try_exists().is_ok_and(|x| x);
@@ -75,8 +78,6 @@ fn retrieve_webpage<'a, S: IntoUrl>(url: S, overwrite: bool) -> Result<String, E
     // Request fresh API data instead
     dbg!("DOING API REQUEST");
     let client = reqwest::blocking::Client::new();
-    const USER_AGENT: &str =
-        "Mozilla/5.0 (Macintosh; Intel Mac OS X x.y; rv:42.0) Gecko/20100101 Firefox/42.0";
     let body: String = client.get(url)
         .header(header::USER_AGENT, USER_AGENT)
         .send()?
@@ -157,10 +158,9 @@ fn extract_row<'a, 'b>(
 // /// Returns spans from the column
 fn extract_spans_from_column<'a, 'b>(
     column: &'b Vec<ElementRef<'a>>,
-) -> Result<Vec<Vec<ElementRef<'a>>>, String> {
-    let first_element = match column.iter().next() {
-        Some(el) => el,
-        None => return Ok(vec![vec![]]), //return Err(format!("Empty column {column:?}"))
+) -> Vec<Vec<ElementRef<'a>>> {
+    let Some(first_element) = column.iter().next() else {
+        return vec![vec![]]
     };
 
     // Each <li> is in own vector
@@ -191,7 +191,7 @@ fn extract_spans_from_column<'a, 'b>(
         }
     };
 
-    Ok(reqs)
+    reqs
 }
 fn extract_column<'a: 'b, 'b>(
     row: &'b Vec<Vec<ElementRef<'a>>>,
@@ -283,8 +283,9 @@ impl LevelRequirement {
 
         let mut recommended_levels: Vec<(&u32, &bool)> = l.filter(|(_, rec)| **rec).collect();
         recommended_levels.sort_by(|a, b| (a.0).cmp(b.0)); // Ascending
+
         let (&lvl, &rec) = recommended_levels.first().unwrap_or(&(&0, &false)); //.expect("This should not be empty...");
-        return (lvl, rec)
+        (lvl, rec)
     }
 
     fn parse_level(level_str: &str) -> (u32, bool, bool) {
@@ -444,9 +445,9 @@ fn get_level_from_ul(ul: &Vec<Vec<ElementRef>>, strict_recommended: bool) -> Vec
         // First pass to get variables
         // And set max value of min_exists_level
         for span in li {
-            let level_req = match get_requirement_from_span(span) {
-                Some(level_req) => level_req,
-                None => continue, // TODO: Don't ignore as may be an unlock
+            let Some(level_req) = get_requirement_from_span(span) else {
+                // TODO: Don't ignore as may be an unlock
+                continue
             };
 
             let level = level_req.get_level(strict_recommended);
@@ -479,10 +480,7 @@ fn get_level_from_ul(ul: &Vec<Vec<ElementRef>>, strict_recommended: bool) -> Vec
 
 /// TODO: Replace row with a "Method" struct?
 fn has_required_levels_for_method(config_levels: &Levels, row: &Vec<Vec<ElementRef>>) -> bool {
-    let level_req_spans = match extract_spans_from_column(&extract_column(row, 3)) {
-        Ok(ul_spans) => ul_spans,
-        Err(reason) => panic!("Error at row: {row:?}: {reason}"),
-    };
+    let level_req_spans = extract_spans_from_column(&extract_column(row, 3));
 
     //let level_reqs: Vec<LevelRequirement> = level_req_spans.iter().map(get_level_from_ul).collect();
     let strict_recommended: bool = config_levels.strict_recommended;

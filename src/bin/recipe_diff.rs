@@ -16,9 +16,10 @@ fn main() -> std::io::Result<()> {
 
     let only_in_new: Vec<_> = new_recipes.difference(&old_recipes).collect();
     let only_in_old: Vec<_> = old_recipes.difference(&new_recipes).collect();
-    println!("Recipes only in new file: {:#?}", only_in_new);
+
+    println!("Recipes only in new file: {only_in_new:#?}");
     println!();
-    println!("Recipes only in old file: {:#?}", only_in_old);
+    println!("Recipes only in old file: {only_in_old:#?}");
 
     Ok(())
 }

@@ -41,6 +41,9 @@ pub enum TimeType {
     MaxHours,
 }
 
+
+/// # Panics
+/// Panics if `single_cost` is negative. But this shouldn't be implemented in practice
 pub fn update_recipe_number(number_per_hour: Option<i32>, coins: i32, single_cost: i32, time_type: TimeType) -> i32 {
     // assert!( number_per_hour.is_some() || single_cost != 0, "{number_per_hour:?} {single_cost}");
     if number_per_hour.is_none() && single_cost == 0 {
@@ -64,21 +67,23 @@ pub fn update_recipe_number(number_per_hour: Option<i32>, coins: i32, single_cos
 
     if matches!(time_type, TimeType::SingleHour) || no_cost || number_per_hour.is_none() {
         return val_per_hour;
-    };
+    }
 
     let number_per_hour = val_per_hour;
 
     // Calculate the highest number of hours as a multiple of number_per_hour
-    let cost_per_hour_i64: i64 = (single_cost as i64).saturating_mul(number_per_hour as i64);
-    let coins_i64 = coins as i64;
-    let single_cost_i64 = single_cost as i64;
+    let cost_per_hour_i64: i64 = i64::from(single_cost).saturating_mul(i64::from(number_per_hour));
+    let coins_i64 = i64::from(coins);
+    let single_cost_i64 = i64::from(single_cost);
 
     let full_hours = coins_i64.saturating_div(cost_per_hour_i64);
+    #[allow(clippy::cast_possible_truncation)]
     let mut total_number = (full_hours as i32).saturating_mul(number_per_hour);
 
     // Calculate any fractional time lost through integer truncation
     let remainder_time = coins_i64.saturating_sub(full_hours.saturating_mul(cost_per_hour_i64));
     if remainder_time >= single_cost_i64 {
+        #[allow(clippy::cast_possible_truncation)]
         let extra_time = remainder_time.saturating_div(single_cost_i64) as i32;
         total_number = total_number.saturating_add(extra_time);
     }
@@ -190,22 +195,25 @@ impl PriceHandle {
                 all_overviews.sort_by_key(|k| k.name.clone());
                 if reverse {
                     all_overviews.reverse();
-                };
+                }
             },
             // TODO: Are these the same order as total times / total profit?
             OverviewSortBy::Profit => {
+                #[allow(clippy::redundant_closure_for_method_calls)]
                 all_overviews.sort_by_key(|k| k.total_gp());
                 if !reverse { // Highest profit first
                     all_overviews.reverse();
-                };
+                }
             },
             OverviewSortBy::Time => {
-                all_overviews.sort_by_key(|k| (k.total_time().unwrap_or(f32::MAX) * SEC_IN_HOUR as f32) as i32);
+                #[allow(clippy::cast_possible_truncation)]
+                all_overviews.sort_by_key(|k| (k.total_time().unwrap_or(f32::MAX) * f32::from(SEC_IN_HOUR) ) as i32);
                 if reverse {
                     all_overviews.reverse();
-                };
+                }
             },
             OverviewSortBy::GPH => {
+                #[allow(clippy::redundant_closure_for_method_calls)]
                 all_overviews.sort_by_key(|k| k.gph());
 
                 if !reverse { // Highest GP/h first
@@ -278,13 +286,14 @@ impl PriceHandle {
         -> Option<(Item, i32)> {
         if input_details.is_empty() {
             return None // No input items required
-        };
+        }
 
         let mut limit_item_number: Option<(Item, i32)> = None;
 
         for (item, (_, quantity)) in input_details {
             let buy_limit = item.limit.unwrap_or(i32::MAX);
 
+            #[allow(clippy::cast_possible_truncation)]
             let number = 
                 (f64::from(buy_limit)/f64::from(*quantity))
                 .floor() as i32;
@@ -294,10 +303,10 @@ impl PriceHandle {
                 None => limit_item_number = Some((item.to_owned(), number)),
                 // Update if the number is smaller
                 Some((limit_item, limit_number)) => if &number < limit_number {
-                    *limit_item = item.to_owned();
+                    item.clone_into(limit_item);
                     *limit_number = number;
                 }
-            };
+            }
 
         };
 
@@ -331,7 +340,7 @@ impl PriceHandle {
 
         let pay_once_cost = pay_once_details.as_ref().map(|details|
             PriceHandle::total_details_price(
-                &details.values().cloned().collect::<Vec<_>>(),
+                &details.values().copied().collect::<Vec<_>>(),
                 false
             )
         );
@@ -365,13 +374,13 @@ impl PriceHandle {
         let mut effective_time_sec: Option<f64> = None;
 
         if time_sec.is_some() {
-            effective_time_sec = time_sec.map(f64::from)
+            effective_time_sec = time_sec.map(f64::from);
         } else { // None
             debug!(desc = "RecipeTime is not set.", name = %recipe.name);
             if user_number_per_hour.is_none() {
                 warn!(desc = "RecipeTime AND number_per_hour are not set.", name = %recipe.name);
                 return None; // No valid values for calculating time so exit function
-            };
+            }
 
             // Otherwise override effective_time_sec with user_number calculation
             let user_eff_time = 60.0f64 * 60.0f64 / f64::from(user_number_per_hour.expect("Just checked user_number_per_hour is not none...?"));
@@ -379,8 +388,10 @@ impl PriceHandle {
                 None => user_eff_time,
                 Some(time) => time.max(user_eff_time)
             });
-        };
+        }
 
+
+        #[allow(clippy::cast_possible_truncation)]
         let effective_number_per_single_hour = effective_time_sec
             .map(|f| (60.0 * 60.0 / f).ceil() as i32);
 
@@ -405,9 +416,12 @@ impl PriceHandle {
             }
         }
 
+        #[allow(clippy::items_after_statements)]
         const MAX_HOURS: f64 = 6.0;
+
         if let Some(eff_time_sec) = effective_time_sec {
-            // allowed number of recipes so total_time <= MAX_HOURS
+            // Allowed number of recipes so total_time <= MAX_HOURS
+            #[allow(clippy::cast_possible_truncation)]
             let max_allowed = ((MAX_HOURS * 3600.0) / eff_time_sec).floor() as i32;
             if max_allowed > 0 && number > max_allowed {
                 debug!(
@@ -419,10 +433,9 @@ impl PriceHandle {
                 number = max_allowed;
             }
         }
-
-
         number = number.max(1);
 
+        #[allow(clippy::cast_possible_truncation)]
         let overview_single_time = effective_time_sec.map(|f| f as f32);
 
         let overview = OverviewRow::new(
@@ -439,14 +452,15 @@ impl PriceHandle {
 
     #[allow(clippy::cast_precision_loss)]
     pub fn apply_tax(profit: i32) -> i32 {
+        const TAX_PERCENT: f64 = 2.0;
+        const FEE_CAP: i32 = 5_000_000;
+
         // Update to 2% tax 2025-05-29
         // https://oldschool.runescape.wiki/w/Grand_Exchange#Convenience_fee_and_item_sink
         if profit < 50 {
             return profit;
-        };
+        }
         
-        const TAX_PERCENT: f64 = 2.0;
-        const FEE_CAP: i32 = 5_000_000;
 
         #[allow(clippy::cast_possible_truncation)]
         // SAFETY: original values and multiplication are within i32 limit
@@ -510,7 +524,7 @@ impl PriceHandle {
     /// When item price does not exist.
     /// true means buy, false means sell
     /// # Returns
-    /// HashMap (Item, (Price, Quantity))
+    /// `HashMap` (Item, (Price, Quantity))
     pub fn item_list_prices_unchecked<I: IntoIterator<Item = (Item, f32)>>(
         item_list: I,
         price_type: bool,
@@ -546,7 +560,6 @@ impl PriceHandle {
                 .collect();
             let difference: Vec<_> = original_names
                 .clone()
-                .into_iter()
                 .filter(|name| !new_names.contains(name))
                 .collect();
             warn!(desc = "Items not found in item_list lookup",
