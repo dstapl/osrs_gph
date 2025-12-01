@@ -33,21 +33,40 @@ pub struct PriceHandle {
 
 use crate::types::SECOND_PER_TICK;
 
+// NOTE: Copy implemented since only simple enum variants
+#[derive(Debug, Default, Clone, Copy)]
+pub enum TimeType {
+    SingleHour,
+    #[default]
+    MaxHours,
+}
 
-pub fn update_recipe_number(number_per_hour: Option<i32>, coins: i32, single_cost: i32) -> i32 {
+pub fn update_recipe_number(number_per_hour: Option<i32>, coins: i32, single_cost: i32, time_type: TimeType) -> i32 {
+    // assert!( number_per_hour.is_some() || single_cost != 0, "{number_per_hour:?} {single_cost}");
+    if number_per_hour.is_none() && single_cost == 0 {
+        // No per-hour info and no cost -> return a safe default of 1.
+        // Change this to `i32::MAX` if you prefer "unbounded".
+        return 0;
+    }
+    
     assert!(single_cost >= 0, "Cost of recipe is negative?");
     
-    let number_per_hour = number_per_hour.unwrap_or(i32::MAX);
-    if single_cost == 0 {
-        return if number_per_hour == i32::MAX { i32::MAX }
-            else { number_per_hour.max(1) };
-    }
+    let no_cost = single_cost == 0;
 
-    // Estimate the total number possible from given coins
-    let effective_max_from_coins: i32 = coins / single_cost;
-    // Return hourly figure if there are no requirements for the recipe
-    if number_per_hour == i32::MAX { return effective_max_from_coins.max(1); }
+    let val_per_hour = number_per_hour.unwrap_or_else(|| {
+            // `no_cost` MUST be false from assertions
+            //  so div by zero should NOT occur
+            // Estimate the total number possible from given coins
+            let effective_max_from_coins: i32 = coins.saturating_div(single_cost);
+            effective_max_from_coins
+        }
+    );
 
+    if matches!(time_type, TimeType::SingleHour) || no_cost || number_per_hour.is_none() {
+        return val_per_hour;
+    };
+
+    let number_per_hour = val_per_hour;
 
     // Calculate the highest number of hours as a multiple of number_per_hour
     let cost_per_hour_i64: i64 = (single_cost as i64).saturating_mul(number_per_hour as i64);
@@ -64,8 +83,11 @@ pub fn update_recipe_number(number_per_hour: Option<i32>, coins: i32, single_cos
         total_number = total_number.saturating_add(extra_time);
     }
 
+    // Know `no_cost` must be false at this point
+    let effective_max_from_coins: i32 = coins.saturating_div(single_cost);
+
     total_number.min(effective_max_from_coins)
-        .max(1)
+    .max(1)
 }
 
 impl PriceHandle {
@@ -98,10 +120,12 @@ impl PriceHandle {
         let recipe_list = self.recipe_list.get_all_recipes();
         assert!(!recipe_list.is_empty());
 
+        let time_type = price_options.time_type;
+
         let all_recipe_prices = recipe_list
             .keys()
             .filter_map(|recipe_name| {
-                let overview_output = self.recipe_price_overview_from_string(recipe_name)?;
+                let overview_output = self.recipe_price_overview_from_string(recipe_name, time_type)?;
                 Some((recipe_name, overview_output))
             })
             .collect::<HashMap<_, _>>();
@@ -195,7 +219,7 @@ impl PriceHandle {
         all_overviews
     }
 
-    pub fn recipe_lookup_from_recipe(&self, recipe: &Recipe) -> Option<DetailedTable> {
+    pub fn recipe_lookup_from_recipe(&self, recipe: &Recipe, time_type: TimeType) -> Option<DetailedTable> {
         // Need to parse item strings into Item objects
         // debug!(desc = "Parsing recipe lookup", name = &recipe.name);
         let pay_once_items: Option<Vec<_>> = recipe.inputs.pay_once.as_ref()
@@ -210,7 +234,7 @@ impl PriceHandle {
 
         let output_details = PriceHandle::item_list_prices_unchecked(output_items, false);
 
-        let (overview, (_,_)) = self.recipe_price_overview_from_recipe(recipe)?;
+        let (overview, (_,_)) = self.recipe_price_overview_from_recipe(recipe, time_type)?;
 
         // Form table
         // Transform input/outputs to DetailedTable type
@@ -244,9 +268,9 @@ impl PriceHandle {
         Some(recipe_lookup)
     }
 
-    pub fn recipe_price_overview_from_string(&self, recipe_name: &String) -> Option<(OverviewRow, (i32, i32))>  {
+    pub fn recipe_price_overview_from_string(&self, recipe_name: &String, time_type: TimeType) -> Option<(OverviewRow, (i32, i32))>  {
         let recipe = self.recipe_list.get_recipe(recipe_name)?;
-        self.recipe_price_overview_from_recipe(recipe)
+        self.recipe_price_overview_from_recipe(recipe, time_type)
     }
 
     
@@ -277,15 +301,14 @@ impl PriceHandle {
 
         };
 
-        return limit_item_number;
+        limit_item_number
     }
+
 
     /// Returns price overview and cost of inputs and (taxed) revenue from outputs
     #[allow(clippy::missing_panics_doc, reason = "infallible")]
-    pub fn recipe_price_overview_from_recipe(&self, recipe: &Recipe) -> Option<(OverviewRow, (i32, i32))> {
+    pub fn recipe_price_overview_from_recipe(&self, recipe: &Recipe, time_type: TimeType) -> Option<(OverviewRow, (i32, i32))> {
         // Need to parse item strings into Item objects
-        // let pay_once_items  = self.parse_item_list(&recipe.inputs.pay_once.unwrap_or(default))?;
-        // debug!(desc = "Parsing recipe overview", name = &recipe.name);
         let pay_once_items: Option<Vec<_>> = recipe.inputs.pay_once.as_ref()
             .and_then(|items| self.parse_item_list(items));
         let input_items = self.parse_item_list(&recipe.inputs.inputs)?;
@@ -341,8 +364,9 @@ impl PriceHandle {
         // Would simplify logic a lot, since only considering f64 not Option<f64>
         let mut effective_time_sec: Option<f64> = None;
 
-        if time_sec.is_some() { effective_time_sec = time_sec.map(f64::from) }
-        else { // None
+        if time_sec.is_some() {
+            effective_time_sec = time_sec.map(f64::from)
+        } else { // None
             debug!(desc = "RecipeTime is not set.", name = %recipe.name);
             if user_number_per_hour.is_none() {
                 warn!(desc = "RecipeTime AND number_per_hour are not set.", name = %recipe.name);
@@ -357,10 +381,16 @@ impl PriceHandle {
             });
         };
 
+        let effective_number_per_single_hour = effective_time_sec
+            .map(|f| (60.0 * 60.0 / f).ceil() as i32);
 
-
+        let number_per_hour = match time_type {
+            TimeType::SingleHour => effective_number_per_single_hour,
+            TimeType::MaxHours => user_number_per_hour,
+        };
+        
         // One or more of time or user_number_per_hour is set
-        let mut number = update_recipe_number(user_number_per_hour, self.coins, cost);
+        let mut number = update_recipe_number(number_per_hour, self.coins, cost, time_type);
 
         if let Some((item, limit_number)) = item_limit_number {
             if limit_number < number {
@@ -370,26 +400,38 @@ impl PriceHandle {
                     limit = &limit_number
                 );
 
-
                 // Update number since restricted by buy limit
                 number = limit_number;
             }
         }
+
+        const MAX_HOURS: f64 = 6.0;
+        if let Some(eff_time_sec) = effective_time_sec {
+            // allowed number of recipes so total_time <= MAX_HOURS
+            let max_allowed = ((MAX_HOURS * 3600.0) / eff_time_sec).floor() as i32;
+            if max_allowed > 0 && number > max_allowed {
+                debug!(
+                    desc = "Capping recipe number to respect the log-out timer",
+                    recipe = %recipe.name,
+                    old_number = number,
+                    capped_to = max_allowed
+                );
+                number = max_allowed;
+            }
+        }
+
+
         number = number.max(1);
 
         let overview_single_time = effective_time_sec.map(|f| f as f32);
-        let time_hours = &overview_single_time.map(|t| t/(60.0f32 * 60.0f32));
-        if time_hours.is_some_and(|t| f64::from(t)*f64::from(number) < 0.01) {
-            dbg!(&time_sec, &effective_time_sec, &overview_single_time, &number, &time_hours.map(|t| f64::from(t)*f64::from(number)), &recipe.name);
-        }
 
         let overview = OverviewRow::new(
             recipe.name.clone(),
             pay_once_cost,
             profit,
-            // effective_time_sec.map(|f| f as f32),
             overview_single_time,
-            number
+            number,
+            time_type
         );
 
         Some((overview, (cost, revenue)))

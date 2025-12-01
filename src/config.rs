@@ -122,6 +122,7 @@ pub struct Display {
     pub sort_by: OverviewSortBy,
     pub filters: EnumMap<OverviewFilter, bool>,
     pub membership: Membership,
+    pub time_type: TimeType,
 }
 
 #[derive(Debug)]
@@ -256,6 +257,7 @@ impl Default for Display {
                 OverviewFilter::Reverse => true,
             },
             membership: Membership::default(),
+            time_type: TimeType::default(),
         }
     }
 }
@@ -348,7 +350,8 @@ where
         "percent_margin must be positive, got {}",
         value
     ));
-    return Err(error)
+    
+    Err(error)
 }
 
 
@@ -356,14 +359,8 @@ where
 use serde::{de::Visitor, Deserializer};
 use std::fmt;
 
-// #[derive(Deserialize, Debug)]
-// pub struct Display {
-//     pub number: u32,
-//     pub lookup: LookupOptions,
-//     pub sort_by: OverviewSortBy,
-//     pub filters: EnumMap<OverviewFilter, bool>,
-//     pub membership: Membership,
-// }
+use crate::prices::prices::TimeType;
+
 impl<'de> Deserialize<'de> for Display {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
         where
@@ -419,7 +416,8 @@ A bool to show if methods requiring `membership` should be shown.
                     lookup,
                     sort_by,
                     filters: filter_map,
-                    membership
+                    membership,
+                    time_type: TimeType::default(), // Not a file config parameter
                 };
 
                 Ok(final_display)

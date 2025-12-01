@@ -4,7 +4,7 @@
 use std::collections::HashMap;
 
 use osrs_gph::{
-    api::Api, check_items_exists, config::{self, OverviewFilter}, file_io::{FileIO, FileOptions}, item_search::recipes::RecipeBook, log_match_panic, prices::prices::PriceHandle, results_writer::markdown::{DetailedRecipeLookup, OptimalOverview}, types::{DetailedTable, ResultsTable, DETAILED_NUM_HEADERS, OVERVIEW_NUM_HEADERS}
+    api::Api, check_items_exists, config::{self, OverviewFilter}, file_io::{FileIO, FileOptions}, item_search::recipes::RecipeBook, log_match_panic, prices::prices::{PriceHandle, TimeType}, results_writer::markdown::{DetailedRecipeLookup, OptimalOverview}, types::{DetailedTable, ResultsTable, DETAILED_NUM_HEADERS, OVERVIEW_NUM_HEADERS}
 };
 use tracing::{info, span, trace, warn, Level};
 
@@ -19,6 +19,14 @@ struct Cli {
 
     #[clap(short = 's', long = "show-hidden", action = ArgAction::SetTrue)]
     show_hidden: bool,
+
+    // TODO: Change this to a value (number of hours to calc for)
+    //  : no value supplied means one hour; 2 hours means 2 hours etc.
+
+    /// Calculate the amount of money made in one hour
+    /// Default behaviour: Calculate the recipes for the maximum number of hours with the given money
+    #[clap(short = 'o', long = "one-hour", action = ArgAction::SetTrue)]
+    number_hours: bool
 }
 
 
@@ -73,6 +81,17 @@ fn main() {
     trace!(show_hidden = show_hidden);
 
     conf.display.filters[OverviewFilter::ShowHidden] = show_hidden;
+
+
+
+    trace!(desc = "Handling max-hours flag");
+    // Override config with new value
+    conf.display.time_type = match cli.number_hours {
+        false => TimeType::MaxHours,
+        true => TimeType::SingleHour,
+    };
+    let time_type = conf.display.time_type;
+    trace!(time_type = ?conf.display.time_type);
 
     // Create item search
     let mut item_search = osrs_gph::item_search::item_search::ItemSearch::new(
@@ -150,7 +169,9 @@ fn main() {
 
     file = file.set_append(false);
 
+
     trace!(desc = "Creating recipe lookups");
+
     // Get top n from the optimal overview
     let mut recipe_lookup_list: Vec<DetailedTable> =
         optimal_overview
@@ -164,7 +185,7 @@ fn main() {
                 // E.g. if `*` is appended to the name due to filters
                 let recipe_s = row.name.clone();
                 let x = price_handle.recipe_list.get_recipe(&recipe_s)?;
-                let specific_lookup = price_handle.recipe_lookup_from_recipe(x)?;
+                let specific_lookup = price_handle.recipe_lookup_from_recipe(x, time_type)?;
                 Some(specific_lookup)
             })
             .collect();
@@ -177,7 +198,7 @@ fn main() {
         .into_iter()
         .filter_map(|recipe_s| {
             let x = price_handle.recipe_list.get_recipe(&recipe_s)?;
-            let specific_lookup = price_handle.recipe_lookup_from_recipe(x)?;
+            let specific_lookup = price_handle.recipe_lookup_from_recipe(x, time_type)?;
             Some(specific_lookup)
         })
         .collect();
