@@ -239,7 +239,7 @@ impl ItemSearch {
 
     #[instrument(level = "trace", skip(self, item_prices))]
     /// Update existing item price list with new entries
-    /// Calls HashMap::extend
+    /// Calls `HashMap::extend`
     /// TODO(2): Currently this is only called once at the start of the program
     ///     However it would duplicate items if called later on,
     ///     from the self.items.insert(...) call
@@ -271,8 +271,10 @@ impl ItemSearch {
     }
 
 
-    // Updates item information with extra info from the mapping file
-    //  e.g. Buy limits, alch values
+    /// Updates item information with extra info from the mapping file
+    ///  e.g. Buy limits, alch values
+    /// # Errors
+    /// See `file_io::FileIO`
     pub fn update_item_extra_info(&mut self, mapping_path: String)
         -> Result<(), std::io::Error> {
         // Read in mapping file
@@ -285,19 +287,19 @@ impl ItemSearch {
 
 
         // Iterate over key-values and update items
-        for (name, lookup_item) in self.items.iter_mut() {
+        for (name, lookup_item) in &mut self.items {
             let Some(item) = mapping_items.get(name) else {
                 unreachable!("{}",
-                    &format!(r#"
+                    &format!(r"
                     Mapping file or Price file must have changed during program runtime.
-                    Could not find price data for {name}"#)
+                    Could not find price data for {name}")
                 );
             };
             
             // Update item information
-            (*lookup_item).alchable = item.alchable.clone();
-            (*lookup_item).limit = item.limit;
-            (*lookup_item).members = item.members;
+            lookup_item.alchable.clone_from(&item.alchable);
+            lookup_item.limit = item.limit;
+            lookup_item.members = item.members;
 
         }
         Ok(())

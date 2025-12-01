@@ -335,25 +335,31 @@ pub mod markdown {
         }
 
 
-        fn _format_quantity_string<const PREC: usize>(quantity: f32) -> String {
+        fn _format_quantity_string<const PREC: usize>(quantity: f64) -> String {
             const ERROR_MARGIN: f64 = 1.0;
 
             let quantity = quantity.to_owned();
-            let quantity_is_int = (f64::from(quantity as i32) - f64::from(quantity)).abs() < ERROR_MARGIN;
+
+            #[allow(clippy::cast_possible_truncation)]
+            let quantity_is_int = (f64::from(quantity as i32) - quantity).abs() < ERROR_MARGIN;
             
             if quantity_is_int {
+                #[allow(clippy::cast_possible_truncation)]
                 (quantity as i32).to_comma_sep_string()  
-            } else { format!("{quantity:.PREC$}") } // TODO: 1 sig. fig. instead of decimal place
+            } else {
+                // TODO: 1 sig. fig. instead of decimal place
+                format!("{quantity:.PREC$}")
+            }
         }
 
         fn push_input_rows(res: &mut Vec<[String; DETAILED_NUM_HEADERS]>, inputs: &Vec<RecipeDetail>, number_recipes: i32) {
-        // fn push_input_rows(res: &mut Vec<[String; DETAILED_NUM_HEADERS]>, inputs: &TableInputs, number_recipes: i32) {
             for (name, price, quantity) in inputs {
+                let quantity: f64 = f64::from(quantity.to_owned());
                 let quantity_string = DetailedRecipeLookup::_format_quantity_string::<1>(
-                    quantity.to_owned()
+                    quantity
                 );
 
-                let total_quantity = number_recipes as f32 * quantity;
+                let total_quantity = f64::from(number_recipes) * quantity;
                 let total_quantity_string = DetailedRecipeLookup::_format_quantity_string::<1>(total_quantity);
 
                 let row = [
@@ -361,7 +367,8 @@ pub mod markdown {
                     quantity_string,
                     total_quantity_string,
                     price.to_comma_sep_string(),
-                    ((f64::from(total_quantity) * f64::from(*price)) as i32).to_comma_sep_string(),
+                    #[allow(clippy::cast_possible_truncation)]
+                    ((total_quantity * f64::from(*price)) as i32).to_comma_sep_string(),
                     String::new(),
                     String::new(),
                 ];
@@ -399,11 +406,13 @@ pub mod markdown {
                 // Inputs Total
                 header = BLANK_LINE;
                 header[0].clone_from(&section_headers[2]);
+
+                #[allow(clippy::cast_possible_truncation)]
                 let single_input_price =  table.inputs.inputs.iter()
                     .map(|(_,price,quantity)| (f64::from(*price) * f64::from(*quantity)) as i32).sum::<i32>();
                 header[4] = (single_input_price * number_recipe).to_comma_sep_string();
                 res.push(header);
-            };
+            }
 
             res.push(BLANK_LINE);
 
@@ -417,6 +426,7 @@ pub mod markdown {
             // Outputs Total (Taxed)
             header = BLANK_LINE;
             header[0].clone_from(&section_headers[4]);
+            #[allow(clippy::cast_possible_truncation)]
             let single_output_price =  table.outputs.iter()
                 .map(|(_,price,quantity)| (f64::from(*price) * f64::from(*quantity)) as i32).sum::<i32>();
             header[4] = (number_recipe * single_output_price).to_comma_sep_string();
@@ -454,8 +464,10 @@ pub mod markdown {
                 .enumerate()
                 .map(|(c, (b, p))| {
                     if (2 <= c) && !(b.is_empty() && p.is_empty()) {
-                        return format!("{} ({})", b, p)
-                    } else { b }
+                        format!("{b} ({p})")
+                    } else {
+                        b
+                    }
                 })
             .collect::<Vec<_>>()
             .try_into()
@@ -468,6 +480,7 @@ pub mod markdown {
         ) -> Vec<(String, i32, f32)> {
             items.iter()
             .map(|(name, price, qty)| {
+                #[allow(clippy::cast_possible_truncation)]               
                 let adjusted = (f64::from(*price) * multiplier) as i32;
                 (name.clone(), adjusted.max(1), *qty)
             })
@@ -575,7 +588,7 @@ pub mod markdown {
 
             for row in &self.current_table_rows {
                 Self::_set_max_widths(&mut self.col_widths,
-                    row.iter().map(|s| s.len()))
+                    row.iter().map(String::len));
             }
         }
     }

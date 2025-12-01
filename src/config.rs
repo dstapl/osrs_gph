@@ -343,12 +343,11 @@ where
     D: Deserializer<'de>,
 {
     let value = f32::deserialize(deserializer)?;
-    if value > 0.0 { return Ok(value) };
+    if value > 0.0 { return Ok(value) }
 
 
     let error = serde::de::Error::custom(format!(
-        "percent_margin must be positive, got {}",
-        value
+        "`percent_margin` must be positive, got {value}",
     ));
     
     Err(error)
@@ -374,13 +373,13 @@ impl<'de> Deserialize<'de> for Display {
             fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
                 // formatter.write_str("four fields containting values/nones: i32,u32,i32,u32.")
                 formatter
-                    .write_str(r#"
+                    .write_str(r"
 A u32 for the (maximum) `number` of methods to display
 A LookupOptions for `lookup`
 An OverviewSortBy for `sort_by`
 Up to 3 fields of bool corresponding to whether each of the display `filters` is enabled.
 A bool to show if methods requiring `membership` should be shown.
-                    "#)
+                    ")
             }
 
             fn visit_map<A>(self, mut map: A) -> Result<Self::Value, A::Error>

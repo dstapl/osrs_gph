@@ -143,7 +143,7 @@ impl OverviewRow {
             self.total_gp() // Per hour already
         } else {
             (
-                f64::from(SEC_IN_HOUR) * self.profit as f64
+                f64::from(SEC_IN_HOUR) * f64::from(self.profit)
                 / f64::from(unsafe { self.time_sec.unwrap_unchecked() })
             ).floor() as i32
         }
@@ -153,8 +153,7 @@ impl OverviewRow {
         // TODO: Use estimate from (number/number_per_hour) * hours
         // in unwrap_or
         self.total_time()
-            .map(|t| t.to_string())
-            .unwrap_or("1.0".to_string()) // Since number_per_hour
+            .map_or("1.0".to_string(), |t| t.to_string()) // Since number_per_hour
     }
     pub fn to_string_cells(&self) -> [String; OVERVIEW_NUM_HEADERS] {
         [
