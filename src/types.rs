@@ -1,6 +1,6 @@
 use std::io;
 
-use crate::helpers::{f_round, ToCommaString};
+use crate::{helpers::{f_round, ToCommaString}, prices::prices::TimeType};
 
 pub const SECOND_PER_TICK: f32 = 0.6;
 pub const SEC_IN_HOUR: u16 = 60 * 60;
@@ -68,6 +68,7 @@ pub struct OverviewRow {
     pub profit: i32, // Can be negative
     pub time_sec: Option<f32>,
     pub number: i32, // TODO: Cap at i32 limit if using u32
+    pub time_type: TimeType,
 }
 
 
@@ -93,13 +94,14 @@ pub struct TableInputs {
 
 impl OverviewRow {
     /// Construct a new row 
-    pub fn new(name: String, pay_once_total: Option<i32>, profit: i32, time_sec: Option<f32>, number: i32) -> Self {
+    pub fn new(name: String, pay_once_total: Option<i32>, profit: i32, time_sec: Option<f32>, number: i32, time_type: TimeType) -> Self {
         OverviewRow {
             name,
             pay_once_total,
             profit,
             time_sec,
             number,
+            time_type,
         }
     }
 
@@ -118,16 +120,20 @@ impl OverviewRow {
     }
 
     pub fn loss_gain(&self) -> i32 {
-        self.ideal_loss_gain() - self.pay_once_total.unwrap_or(0)
+        self.ideal_loss_gain().saturating_sub(
+            self.pay_once_total.unwrap_or(0)
+        )
     }
 
     pub fn ideal_total_gp(&self) -> i32 {
-        self.ideal_loss_gain() * self.number
+        self.ideal_loss_gain().saturating_mul(self.number)
     }
 
     pub fn total_gp(&self) -> i32 {
         // Compensate for removing once
-        self.ideal_total_gp() - self.pay_once_total.unwrap_or(0)
+        self.ideal_total_gp().saturating_sub(
+            self.pay_once_total.unwrap_or(0)
+        )
     }
     pub fn gph(&self) -> i32 {
         #[allow(clippy::cast_possible_truncation, clippy::cast_precision_loss)]

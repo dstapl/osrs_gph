@@ -511,6 +511,7 @@ pub mod markdown {
                 Some(table.overview.number),
                 self.current_coins,
                 input_cost_pm,
+                table.overview.time_type
             );
 
             // Decrease profit of recipe
@@ -593,6 +594,7 @@ pub mod markdown {
                 profit: 375,
                 time_sec: Some(3.6),
                 number: 1_571,
+                time_type: crate::prices::prices::TimeType::SingleHour,
             };
             let formatter = OptimalOverview::default();
 
