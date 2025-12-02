@@ -46,27 +46,30 @@ pub enum TimeType {
 /// Panics if `single_cost` is negative. But this shouldn't be implemented in practice
 pub fn update_recipe_number(number_per_hour: Option<i32>, coins: i32, single_cost: i32, time_type: TimeType) -> i32 {
     // assert!( number_per_hour.is_some() || single_cost != 0, "{number_per_hour:?} {single_cost}");
-    if number_per_hour.is_none() && single_cost == 0 {
-        // No per-hour info and no cost -> return a safe default of 1.
-        // Change this to `i32::MAX` if you prefer "unbounded".
-        return 0;
-    }
-    
     assert!(single_cost >= 0, "Cost of recipe is negative?");
-    
-    let no_cost = single_cost == 0;
 
-    let val_per_hour = number_per_hour.unwrap_or_else(|| {
-            // `no_cost` MUST be false from assertions
-            //  so div by zero should NOT occur
-            // Estimate the total number possible from given coins
-            let effective_max_from_coins: i32 = coins.saturating_div(single_cost);
-            effective_max_from_coins
-        }
+    let no_cost: bool = single_cost == 0;
+
+    if number_per_hour.is_none() && no_cost {
+        // No per-hour info and no cost --> return a safe default of 1.
+        return 1;
+    }
+
+
+    let effective_max_from_coins = (single_cost > 0).then(||
+        coins.saturating_div(single_cost)
     );
 
+    let val_per_hour = number_per_hour.unwrap_or_else(||
+        effective_max_from_coins
+            .expect("no-cost should be handled already in the function")
+    );
+
+
     if matches!(time_type, TimeType::SingleHour) || no_cost || number_per_hour.is_none() {
-        return val_per_hour;
+        return effective_max_from_coins.map_or(val_per_hour,
+            |num| val_per_hour.min(num)
+        )
     }
 
     let number_per_hour = val_per_hour;
@@ -89,9 +92,12 @@ pub fn update_recipe_number(number_per_hour: Option<i32>, coins: i32, single_cos
     }
 
     // Know `no_cost` must be false at this point
-    let effective_max_from_coins: i32 = coins.saturating_div(single_cost);
+    // let effective_max_from_coins: i32 = coins.saturating_div(single_cost);
+    // let effective_max_from_coins: i32 = effective_max_from_coins.
 
-    total_number.min(effective_max_from_coins)
+    total_number.min(
+        effective_max_from_coins.expect("`no_cost` must be false at this point")
+    )
     .max(1)
 }
 
@@ -383,7 +389,7 @@ impl PriceHandle {
             }
 
             // Otherwise override effective_time_sec with user_number calculation
-            let user_eff_time = 60.0f64 * 60.0f64 / f64::from(user_number_per_hour.expect("Just checked user_number_per_hour is not none...?"));
+            let user_eff_time = 3600.0f64 / f64::from(user_number_per_hour.expect("Just checked user_number_per_hour is not none...?"));
             effective_time_sec = Some(match effective_time_sec {
                 None => user_eff_time,
                 Some(time) => time.max(user_eff_time)
@@ -393,7 +399,7 @@ impl PriceHandle {
 
         #[allow(clippy::cast_possible_truncation)]
         let effective_number_per_single_hour = effective_time_sec
-            .map(|f| (60.0 * 60.0 / f).ceil() as i32);
+            .map(|f| (3600.0 / f).ceil() as i32);
 
         let number_per_hour = match time_type {
             TimeType::SingleHour => effective_number_per_single_hour,

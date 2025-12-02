@@ -520,12 +520,15 @@ pub mod markdown {
             // Since the cost will increase with a positive % margin
             // Then effective_nph will decrease further
             // --> output will be effective_nph
-            table.overview.number = crate::prices::prices::update_recipe_number(
+            let pm_number = crate::prices::prices::update_recipe_number(
                 Some(table.overview.number),
                 self.current_coins,
                 input_cost_pm,
                 table.overview.time_type
             );
+            // Take minimum of the two numbers since
+            // original table.overview.number is capped by the buy limit
+            table.overview.number = table.overview.number.min(pm_number);
 
             // Decrease profit of recipe
             let output_cost_pm: i32 = DetailedTable::single_recipe_price(

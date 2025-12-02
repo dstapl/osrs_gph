@@ -45,9 +45,8 @@ profit:
   
   # Ignore specific methods by their name instead of items involved
   ignore_methods:
-    - Gargoyles (Off-task)
-    - Killing Urium Shades
-    - asdf test recipe
+    # - Gargoyles (Off-task)
+    # - Killing Urium Shades
 
 display:
   # File output (Frontend)
