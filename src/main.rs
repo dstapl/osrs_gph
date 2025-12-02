@@ -123,6 +123,10 @@ fn main() {
     let mut recipe_list = RecipeBook::new(HashMap::new());
     recipe_list.load_default_recipes(conf.filepaths.lookup_data.recipes);
 
+    // Get ignored methods from the config
+    let ignore_methods: Vec<String> = conf.profit.ignore_methods.clone();
+    recipe_list.ignore_recipes(ignore_methods);
+
     trace!(desc = "Creating price handle...");
     let price_handle = PriceHandle::new(
         item_search,

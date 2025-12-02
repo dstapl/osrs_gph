@@ -74,6 +74,7 @@ pub struct Profit {
     #[serde(rename = "custom_weights")]
     pub weights: Weights,
     pub ignore_items: Vec<String>,
+    pub ignore_methods: Vec<String>,
 }
 
 #[derive(Deserialize, Debug)]
@@ -222,12 +223,12 @@ impl Default for Weights {
 }
 impl Default for Profit {
     fn default() -> Self {
-        let ignore_items: Vec<&str> = vec![];
         Self {
             coins: 2_000_000,
             percent_margin: 2.5,
             weights: Weights::default(),
-            ignore_items: ignore_items.iter().map(ToString::to_string).collect(),
+            ignore_items: vec![],
+            ignore_methods: vec![],
         }
     }
 }
@@ -288,6 +289,7 @@ impl Default for Levels {
         levels.insert("runecraft".to_string(), 1);
         levels.insert("hunter".to_string(), 1);
         levels.insert("construction".to_string(), 1);
+        levels.insert("sailing".to_string(), 1);
         levels.insert("quest points".to_string(), 0);
         //let total_level: u32 = Self::_init_calc_total_level(&levels);
         //levels.insert("total level".to_string(), total_level);
@@ -440,7 +442,7 @@ impl<'de> Deserialize<'de> for Levels {
             fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
                 // formatter.write_str("four fields containting values/nones: i32,u32,i32,u32.")
                 formatter
-                    .write_str("23 fields of u32 corresponding to the level in each OSRS skill.")
+                    .write_str("24 fields of u32 corresponding to the level in each OSRS skill.")
             }
 
             fn visit_map<A>(self, mut map: A) -> Result<Self::Value, A::Error>
