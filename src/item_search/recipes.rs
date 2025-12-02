@@ -7,7 +7,7 @@ use crate::{
 };
 use tracing::{debug, trace, warn};
 
-use std::{collections::HashMap, fmt::Debug};
+use std::{collections::{HashMap, HashSet}, fmt::Debug};
 
 // #[serde(untagged)]
 #[derive(Debug, Default, Clone)]
@@ -214,6 +214,27 @@ impl RecipeBook {
         }
 
         rec
+    }
+
+    pub fn ignore_recipes(&mut self, remove_list: Vec<String>) {
+        let mut removed_recipes: Vec<String> = Vec::with_capacity(remove_list.capacity());
+
+        self.recipes.retain(|key, _| {
+            let should_remove = remove_list.contains(key);
+            if should_remove { removed_recipes.push(key.to_owned()); }
+
+            !should_remove
+        });
+
+        // Check if any are remaining. These will be methods with incorrect names
+        let removed_recipes = HashSet::<String>::from_iter(removed_recipes);
+        let recipe_list= HashSet::<String>::from_iter(remove_list);
+
+        let difference = &recipe_list - &removed_recipes;
+
+        for method in difference {
+            warn!("Invalid recipe name to ignore: {}", method);
+        }
     }
 
     pub fn get_all_recipes(&self) -> HashMap<String, Recipe> {
