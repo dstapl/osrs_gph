@@ -284,7 +284,7 @@ impl LevelRequirement {
         let mut recommended_levels: Vec<(&u32, &bool)> = l.filter(|(_, rec)| **rec).collect();
         recommended_levels.sort_by(|a, b| (a.0).cmp(b.0)); // Ascending
 
-        let (&lvl, &rec) = recommended_levels.first().unwrap_or(&(&0, &false)); //.expect("This should not be empty...");
+        let &(&lvl, &rec) = recommended_levels.first().unwrap_or(&(&0, &false)); //.expect("This should not be empty...");
         (lvl, rec)
     }
 
