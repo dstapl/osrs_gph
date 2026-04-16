@@ -233,13 +233,13 @@ impl FileIO {
     /// # Panics
     /// When data serialization or file i/o fails
     pub fn write_serialized<J: Serialize>(&mut self, data: &J) -> Result<(), std::io::Error> {
-        let buffer = self.get_writer()?;
+        let mut buffer = self.get_writer()?;
 
         let now = Instant::now(); // DEBUG
-        serde_yaml_ng::to_writer(buffer, data).expect("Failed to write to file");
+        serde_yaml_ng::to_writer(&mut buffer, data).expect("Failed to write to file");
         println!("Wrote file in {:?}", now.elapsed()); // DEBUG
 
-        self.flush()?;
+        buffer.flush()?;
 
         Ok(())
     }

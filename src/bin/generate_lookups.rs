@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::io::Write;
 
 use osrs_gph::api::MappingItem;
 use osrs_gph::config::{self, load_config};
@@ -28,12 +29,11 @@ fn main() {
     let client = reqwest::blocking::Client::new();
 
     trace!(desc = "Sending API request");
-    let mut mapping_text: String = client
+    let mut mapping: Vec<MappingItem> = client
         .get(config.api.url + "/mapping")
         .header(reqwest::header::USER_AGENT, USER_AGENT)
         .send().expect("Failed to send API request")
-        // TODO: Hopefully this won't get too big to fit in memory...
-        .text().expect("Failed to parse text of response");
+        .json().expect("Failed to deserialize json");
 
     // Write Response to file
     let mapping_path_str: String = config.filepaths.lookup_data.api_mapping;
@@ -41,12 +41,6 @@ fn main() {
     trace!(desc = "Creating mapping_fio");
     let mut mapping_fio =
         file_io::FileIO::new(mapping_path_str.clone(), FileOptions::new(true, true, true));
-
-
-    // Need to convert json to a common `Value` that serde_yaml_ng can write out
-    let mut mapping_value: Vec<serde_json::Value>= serde_json::from_str(&mapping_text)
-        .expect("Failed to parse json response into a value");
-    
 
     // Add special currencies into mapping
     let coins = MappingItem{
@@ -62,41 +56,36 @@ fn main() {
         alchable: None
     };
 
-    let special_items: Vec<serde_json::Value> = serde_json::from_str(
-        &serde_json::ser::to_string(
-            &vec![coins]
-        )
-        .expect("Failed to convert special items into json")
-    ).expect("Failed to convert special items json str into json value");
+    let special_items: Vec<MappingItem> = vec![
+        coins
+    ];
+    mapping.extend(special_items);
+
+
+    {
+        // Format and write to mapping file
+        let mapping_hashmap: HashMap<&String, &MappingItem> = 
+            mapping.iter()
+            .map(|item| (&item.name, item))
+            .collect();
+
+        trace!(desc = "Writing mapping to file");
+        log_match_panic(
+            mapping_fio.clear_contents(),
+            "Clearing file contents.",
+            "Failed to clear file contents.",
+        );
+        log_match_panic(
+            mapping_fio.write_serialized(&mapping_hashmap),
+            &format!("Reading mapping file {mapping_path_str}"),
+            &format!("Failed to parse mapping {mapping_path_str}"),
+        );
         
-
-    // Concatenate
-    mapping_value.extend(special_items);
-
-    // Convert to YAML
-    trace!(desc = "Re-/serialising mapping into YAML");
-    mapping_text = serde_yaml_ng::to_string(&mapping_value)
-        .expect("Failed to convert JSON into YAML");
-    let mapping: Vec<MappingItem> = serde_yaml_ng::from_str(&mapping_text).expect("Failed to serialise mapping_text into YAML");
-
-
-    // Format and write to mapping file
-    let mapping_hashmap: HashMap<&String, &MappingItem> = 
-        mapping.iter()
-        .map(|item| (&item.name, item))
-        .collect::<HashMap<_,_>>();
-    trace!(desc = "Writing mapping to file");
-    log_match_panic(
-        mapping_fio.write_serialized(&mapping_hashmap),
-        &format!("Reading mapping file {mapping_path_str}"),
-        &format!("Failed to parse mapping {mapping_path_str}"),
-    );
-    
+        // Force flush
+        mapping_fio.flush().expect("Failed to flush mapping to disk");
+    }
 
     // Split mapping into id_to_name and name_to_id
-    let id_to_name_str: String = config.filepaths.lookup_data.id_to_name;
-    let name_to_id_str: String = config.filepaths.lookup_data.name_to_id;
-
     let mut id_to_name = HashMap::<String, String>::with_capacity(mapping.len());
     trace!(desc = "Initialised id_to_name HashMap");
 
@@ -106,15 +95,15 @@ fn main() {
     debug!(desc = "Inserting values into mappings...");
     for item in mapping {
         let item_id = item.id.to_string();
-        let item_name = item.name.to_string();
+        let item_name = item.name;
 
-        let mut val = id_to_name.insert(item_id.clone(), item_name.clone());
-        trace!(mapping = "id_to_name", value = ?val);
-
-        val = name_to_id.insert(item_name, item_id);
-        trace!(mapping = "name_to_id", value = ?val);
+        id_to_name.insert(item_id.clone(), item_name.clone());
+        name_to_id.insert(item_name, item_id);
     }
 
+
+    // Write new mappings out to files
+    let id_to_name_str: String = config.filepaths.lookup_data.id_to_name;
     trace!(desc = "Setting mapping_fio file path", value = %id_to_name_str);
     mapping_fio.set_file_path(id_to_name_str);
 
@@ -129,6 +118,7 @@ fn main() {
         "Failed to write data.",
     );
 
+    let name_to_id_str: String = config.filepaths.lookup_data.name_to_id;
     trace!(desc = "Setting mapping_fio file path", value = %name_to_id_str);
     mapping_fio.set_file_path(name_to_id_str);
 

@@ -1,31 +1,35 @@
-| Method                                      | Loss/Gain | (Total) Loss/Gain | Time (Hours) |      GP/h |
-| ------------------------------------------- | --------- | ----------------- | ------------ | --------- |
-| Making kwuarm potions                       |       708 |           635,784 |          0.3 | 2,123,999 |
-| Gargoyles (Off-task)                        |   615,264 |           615,264 |            1 |   615,264 |
-| Smithing Mithril cannonballs                |       928 |           538,240 |            1 |   538,239 |
-| Killing Urium Shades                        |   443,311 |           443,311 |            1 |   443,311 |
-| Smithing Steel cannonballs                  |       692 |           401,360 |            1 |   401,359 |
-| Making avantoe potions                      |       321 |           390,978 |         0.41 |   962,999 |
-| Making irit potions                         |       298 |           335,846 |         0.38 |   893,999 |
-| Making dwarf weed potions                   |       261 |           295,452 |         0.38 |   782,999 |
-| Making cadantine potions                    |       257 |           256,229 |         0.33 |   770,999 |
-| Making teak planks                          |     1,426 |           203,918 |            1 |   203,714 |
-| Making oak planks                           |     1,354 |           193,622 |            1 |   193,428 |
-| Humidify Clay                               |       398 |           191,438 |         0.24 |   795,999 |
-| Making varrock teleport tablets             |       151 |           181,200 |            1 |   181,200 |
-| Making teleport to house tablets            |       151 |           181,200 |            1 |   181,200 |
-| Making guam potions                         |        59 |           177,000 |            1 |   176,999 |
-| Making ardougne teleport tablets            |       125 |           150,000 |            1 |   150,000 |
-| Casting Tan Leather (Black d'hide)          |       681 |           130,071 |          0.1 | 1,361,999 |
-| Making mahogany planks                      |     2,190 |           124,830 |          0.4 |   312,857 |
-| Stealing valuables                          |   124,528 |           124,528 |            1 |   124,528 |
-| Cooking karambwan                           |        81 |            97,200 |            1 |    97,200 |
-| Making toadflax potions                     |        79 |            85,162 |         0.36 |   236,999 |
-| Making snapdragon potions                   |       220 |            65,120 |          0.1 |   659,999 |
-| Enchanting dragonstone jewellery (Manual)   |       268 |            61,372 |         0.11 |   535,999 |
-| Enchanting dragonstone jewellery (Autocast) |       268 |            61,372 |         0.27 |   229,714 |
-| Making ranarr potions                       |       127 |            58,928 |         0.15 |   380,999 |
-| Stranglewood fishing                        |       564 |            56,400 |            1 |    56,400 |
-| Degriming grimy torstol                     |       991 |            27,748 |         0.04 |   743,249 |
-| Degriming grimy cadantine                   |       415 |            15,355 |         0.05 |   311,249 |
-| Making planks                               |        17 |             2,431 |            1 |     2,428 |
+| Method                                         | Loss/Gain | (Total) Loss/Gain | Time (Hours) |      GP/h |
+| ---------------------------------------------- | --------- | ----------------- | ------------ | --------- |
+| Killing Urium Shades                           |   667,331 |         4,003,986 |            6 |   667,331 |
+| Making varrock teleport tablets                |       504 |         3,628,800 |            6 |   604,800 |
+| Making teleport to house tablets               |       504 |         3,628,800 |            6 |   604,800 |
+| Gargoyles (Off-task)                           |   584,074 |         3,504,444 |            6 |   584,074 |
+| Smithing Steel cannonballs                     |     1,086 |         2,660,700 |         4.22 |   629,879 |
+| Making oak planks                              |     7,179 |         2,562,903 |          2.5 | 1,025,571 |
+| Making ardougne teleport tablets               |       243 |         1,749,600 |            6 |   291,600 |
+| Making teak planks                             |     7,417 |         1,186,720 |         1.12 | 1,059,571 |
+| Cooking karambwan                              |       135 |           972,000 |            6 |   162,000 |
+| Making guam potions                            |        76 |           702,696 |         3.08 |   227,999 |
+| Humidify Clay                                  |     1,111 |           534,391 |         0.24 | 2,221,999 |
+| Making irit potions                            |       326 |           494,216 |         0.51 |   977,999 |
+| Stranglewood fishing                           |       750 |           450,000 |            6 |    75,000 |
+| Making mahogany planks                         |     7,639 |           435,423 |          0.4 | 1,091,285 |
+| Making lantadyme potions                       |       272 |           406,096 |          0.5 |   815,999 |
+| Making planks                                  |       596 |           330,780 |         3.88 |    85,142 |
+| Making dwarf weed potions                      |       195 |           289,575 |          0.5 |   584,999 |
+| Making kwuarm potions                          |       253 |           256,289 |         0.34 |   758,999 |
+| Making toadflax potions                        |       204 |           207,672 |         0.34 |   611,999 |
+| Making cadantine potions                       |       211 |           196,019 |         0.31 |   632,999 |
+| Making avantoe potions                         |       142 |           194,398 |         0.46 |   425,999 |
+| Stealing valuables                             |   123,319 |           123,319 |            1 |   123,319 |
+| Enchanting dragonstone jewellery (Manual)      |       352 |            82,368 |         0.12 |   703,999 |
+| Enchanting dragonstone jewellery (Autocast)    |       352 |            82,368 |         0.27 |   301,714 |
+| Making snapdragon potions                      |       235 |            77,080 |         0.11 |   704,999 |
+| Degriming grimy avantoe                        |     1,219 |            64,607 |         0.07 |   914,249 |
+| Charging and alchemising bracelets of ethereum |       979 |            60,698 |         0.13 |   451,846 |
+| Degriming grimy torstol                        |     2,100 |            58,800 |         0.04 | 1,574,999 |
+| Making ranarr potions                          |       112 |            54,656 |         0.16 |   335,999 |
+| Crushing bird nests (Manual)                   |        55 |            30,415 |         0.09 |   329,999 |
+| Crushing bird nests (Auto)                     |        55 |            30,415 |         0.28 |   109,999 |
+| Degriming grimy ranarr weed                    |       512 |             9,216 |         0.02 |   383,999 |
+| Degriming grimy cadantine                      |         2 |                70 |         0.05 |     1,499 |

@@ -10,7 +10,7 @@ use crate::{item_search::data_types, log_match_panic, log_panic};
 
 use tracing::{instrument, trace, warn};
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct MappingItem {
     pub name: String,
     // #[serde(default)]
