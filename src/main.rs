@@ -13,7 +13,7 @@ use clap::{Parser, builder::ArgAction};
 #[derive(Parser)]
 #[command(about, long_about = None)]
 struct Cli {
-    /// Refresh prices or not
+    /// Refresh prices or not.
     #[clap(short = 'r', long, action = ArgAction::SetTrue)]
     refresh: bool,
 
@@ -23,7 +23,7 @@ struct Cli {
     // TODO: Change this to a value (number of hours to calc for)
     //  : no value supplied means one hour; 2 hours means 2 hours etc.
 
-    /// Calculate the amount of money made in one hour
+    /// Calculate the amount of money made in one hour.
     /// Default behaviour: Calculate the recipes for the maximum number of hours with the given money
     #[clap(short = 'o', long = "one-hour", action = ArgAction::SetTrue)]
     number_hours: bool
