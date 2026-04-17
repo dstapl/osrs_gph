@@ -4,7 +4,7 @@ use std::fs;
 use std::path::PathBuf;
 
 fn main() -> std::io::Result<()> {
-    let path: PathBuf = PathBuf::from("src").join("bin").join("wiki_info");
+    let path: PathBuf = PathBuf::from("src").join("bin").join("get_wiki_recipes").join("wiki_info");
     let new_path: PathBuf = path.join("wiki_allowed_recipes.txt");
     let old_path: PathBuf = PathBuf::from(new_path.to_str().unwrap().to_string() + ".bak");
 

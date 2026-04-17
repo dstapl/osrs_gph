@@ -1,6 +1,6 @@
 /target
 src/target
-src/bin/wiki_info/*.html
+src/bin/get_wiki_recipes/wiki_info/*.html
 *.log
 
 *.svg*
