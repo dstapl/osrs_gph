@@ -21,6 +21,7 @@ thousands = "0.2.0"
 tracing = "0.1.41"
 # TODO: Add json support?
 tracing-subscriber = { version = "0.3.19", features = ["env-filter"] }
+thiserror = "2.0.18"
 
 
 # Keep debug information by default
