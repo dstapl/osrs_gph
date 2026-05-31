@@ -27,6 +27,7 @@ pub const DETAILED_ROW_HEADERS: [&str; DETAILED_NUM_HEADERS] = [
     "Profit/Recipe Time (GP/h)"
 ];
 
+
 pub trait ResultsTable {
     type Row;
 
@@ -106,7 +107,7 @@ impl OverviewRow {
     }
 
     /// Total time in hours
-    pub fn total_time(&self) -> Option<f32> {
+    pub fn total_time_h(&self) -> Option<f32> {
         #[allow(clippy::cast_precision_loss)]
         // Number of recipes isn't going to be larger than 10,000 at most
         // This is well under f32 limit of 2^23.
@@ -152,7 +153,7 @@ impl OverviewRow {
     pub fn format_time_string(&self) -> String {
         // TODO: Use estimate from (number/number_per_hour) * hours
         // in unwrap_or
-        self.total_time()
+        self.total_time_h()
             .map_or("1.0".to_string(), |t| t.to_string()) // Since number_per_hour
     }
     pub fn to_string_cells(&self) -> [String; OVERVIEW_NUM_HEADERS] {
@@ -208,6 +209,6 @@ impl DetailedTable {
     }
 
     pub fn total_time(&self) -> Option<f32> {
-        self.overview.total_time()
+        self.overview.total_time_h()
     }
 }

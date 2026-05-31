@@ -1,11 +1,11 @@
 use crate::{
-    config::{Membership, OverviewFilter, OverviewSortBy},
+    config::{Membership, OverviewFilter, OverviewSortBy, TimeLimit},
     helpers::f_round,
     item_search::{
         item_search::{Item, ItemSearch},
         recipes::{Recipe, RecipeBook, RecipeTime},
     },
-    types::{DetailedTable, TableInputs, OverviewRow, SEC_IN_HOUR},
+    types::{DetailedTable, OverviewRow, SEC_IN_HOUR, TableInputs},
 };
 
 use std::collections::HashMap;
@@ -120,18 +120,19 @@ impl PriceHandle {
         &self,
         sort_by_option: &OverviewSortBy,
         sort_by_weights: &Weights,
-        price_options: &crate::config::Display,
+        display_options: &crate::config::Display,
     ) -> Vec<OverviewRow> {
-        let profiting = price_options.filters[OverviewFilter::MustProfit];
-        let show_hidden = price_options.filters[OverviewFilter::ShowHidden];
-        let reverse = price_options.filters[OverviewFilter::Reverse];
-        let membership_option = &price_options.membership;
+        let profiting = display_options.filters[OverviewFilter::MustProfit];
+        let show_hidden = display_options.filters[OverviewFilter::ShowHidden];
+        let reverse = display_options.filters[OverviewFilter::Reverse];
+        let membership_option = &display_options.membership;
+        let time_limit = display_options.time_limit;
 
         // Get recipe input/output prices
         let recipe_list = self.recipe_list.get_all_recipes();
         assert!(!recipe_list.is_empty());
 
-        let time_type = price_options.time_type;
+        let time_type = display_options.time_type;
 
         let all_recipe_prices = recipe_list
             .keys()
@@ -147,16 +148,18 @@ impl PriceHandle {
         let mut all_overviews = Vec::new();
         let coins = self.coins;
 
+        // Filter by each requirement
         for (recipe_name, (mut overview, (cost, _revenue))) in all_recipe_prices {
+            // Filter by membership
             let needs_members = recipe_list[recipe_name].members;
 
-            let skip = match membership_option {
+            let membership_skip = match membership_option {
                 Membership::F2P => needs_members,
                 Membership::P2P => !needs_members,
                 Membership::BOTH => false,
             };
 
-            if skip {
+            if membership_skip {
                 debug!(
                     desc = "Skipping recipe for membership requirement...",
                     name = %recipe_name,
@@ -166,7 +169,23 @@ impl PriceHandle {
                 continue;
             }
 
-            // let profit = overview.profit;
+            // Filter by time
+            if let Some(limit) = time_limit {
+                // total_time returns hours
+                let recipe_time = overview.total_time_h().unwrap_or(f32::MAX);
+
+                if recipe_time > limit.hours {
+                    debug!(
+                        desc = "Skipping recipe due to time limit",
+                        name = %recipe_name,
+                        recipe_time,
+                        ?limit,
+                    );
+                    continue;
+                }
+            }
+
+            // Filter by price options
             let profit = overview.loss_gain();
             let recipe_cost = cost;
 
@@ -213,7 +232,7 @@ impl PriceHandle {
             },
             OverviewSortBy::Time => {
                 #[allow(clippy::cast_possible_truncation)]
-                all_overviews.sort_by_key(|k| (k.total_time().unwrap_or(f32::MAX) * f32::from(SEC_IN_HOUR) ) as i32);
+                all_overviews.sort_by_key(|k| (k.total_time_h().unwrap_or(f32::MAX) * f32::from(SEC_IN_HOUR) ) as i32);
                 if reverse {
                     all_overviews.reverse();
                 }
@@ -409,8 +428,8 @@ impl PriceHandle {
         // One or more of time or user_number_per_hour is set
         let mut number = update_recipe_number(number_per_hour, self.coins, cost, time_type);
 
-        if let Some((item, limit_number)) = item_limit_number {
-            if limit_number < number {
+        if let Some((item, limit_number)) = item_limit_number
+            && limit_number < number {
                 debug!(
                     recipe = &recipe.name,
                     item_limiter = &item.name,
@@ -419,16 +438,12 @@ impl PriceHandle {
 
                 // Update number since restricted by buy limit
                 number = limit_number;
-            }
         }
 
-        #[allow(clippy::items_after_statements)]
-        const MAX_HOURS: f64 = 6.0;
-
         if let Some(eff_time_sec) = effective_time_sec {
-            // Allowed number of recipes so total_time <= MAX_HOURS
+            // Allowed number of recipes so total_time <= TimeLimit::LOG_OUT_TIME
             #[allow(clippy::cast_possible_truncation)]
-            let max_allowed = ((MAX_HOURS * 3600.0) / eff_time_sec).floor() as i32;
+            let max_allowed = (f64::from(TimeLimit::LOG_OUT_TIME.hours * 3600.0) / eff_time_sec).floor() as i32;
             if max_allowed > 0 && number > max_allowed {
                 debug!(
                     desc = "Capping recipe number to respect the log-out timer",

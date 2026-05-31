@@ -1,9 +1,10 @@
-use std::{collections::HashMap, fs::File};
+// Implement custom deserializers
+use serde::{Deserialize, Deserializer, de::Visitor};
+use std::{fmt, collections::HashMap, fs::File};
+
+use crate::prices::prices::TimeType;
 
 use enum_map::{enum_map, Enum, EnumMap};
-
-//use serde::de::Deserialize;
-use serde::Deserialize;
 
 #[derive(Deserialize, Debug, Default)]
 /// Define config type
@@ -28,7 +29,7 @@ pub enum TimeSpan {
     // TODO: Extend to 6h(our), 24h(our)? This is only for specific item lookup
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, Clone)]
 pub struct Api {
     pub url: String,
     pub timespan: TimeSpan,
@@ -58,6 +59,7 @@ pub struct FilePaths {
     pub bin_log_file: String,
 }
 
+// TODO: Remove Copy from here?
 #[derive(Deserialize, Clone, Copy, Debug)]
 pub struct Weights {
     pub margin: f32,
@@ -80,16 +82,18 @@ pub struct Profit {
 #[derive(Deserialize, Debug)]
 pub struct LookupOptions {
     pub top: u32,
+    pub max_wildcard_matches: usize,
     pub specific: Vec<String>,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Default, Deserialize, Debug)]
 pub enum Membership {
     #[serde(rename = "f2p")]
     F2P,
     #[serde(rename = "p2p")]
     P2P,
     #[serde(rename = "both")]
+    #[default]
     BOTH,
 }
 
@@ -119,11 +123,17 @@ pub enum OverviewFilter {
 #[derive(Debug)]
 pub struct Display {
     pub number: u32,
+    pub time_limit: Option<TimeLimit>,
     pub lookup: LookupOptions,
     pub sort_by: OverviewSortBy,
     pub filters: EnumMap<OverviewFilter, bool>,
     pub membership: Membership,
     pub time_type: TimeType,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct TimeLimit {
+    pub hours: f32
 }
 
 #[derive(Debug)]
@@ -157,6 +167,7 @@ impl Levels {
         let curr_quest_points: u32 = self.levels.get("quest points").unwrap_or(&0).to_owned();
         level_sum - curr_total_level - curr_quest_points
     }
+
     fn _init_calc_total_level(levels: &HashMap<String, u32>) -> u32 {
         let level_sum: u32 = levels // Includes total_level
             .values()
@@ -166,6 +177,61 @@ impl Levels {
         level_sum
     }
 }
+
+impl TimeLimit {
+    /// Hours
+    pub const LOG_OUT_TIME: TimeLimit = TimeLimit { hours: 6.0 };
+    
+    pub fn new(hours: f32) -> Self {
+        TimeLimit { hours: hours.min(Self::LOG_OUT_TIME.hours) }
+    }
+
+    /// # Panics
+    /// Will panic if config is non-empty and does not contain a:
+    ///  -   Numeric value (can contain `.`)
+    ///  -   Alphabetical string proceeding the value
+    pub fn parse(s: &str) -> Option<Self> {
+        let s = s.trim().to_ascii_lowercase();
+
+        if s.is_empty() {
+            return None;
+        }
+
+        // 6.0 hours -> ["6.0", "hours"]
+        // TODO: Handle if unit not included. Currently just reutrning None fully
+        let split = s
+            .char_indices()
+            .find(|(_, c)| !c.is_ascii_digit() && *c != '.')
+            .map(|(i, _)| i)
+            .expect("Missing number or unit");
+
+        let (num_str, unit) = s.split_at(split);
+
+        let value: f32 = num_str.trim().parse().ok()?;
+
+
+        let value = if unit.contains('h') {
+            value
+        } else if unit.contains('m') {
+            value / 60.0
+        } else {
+            // Unit not supported
+            return None
+        };
+
+
+        Some( Self::new(value) )
+    }
+}
+
+impl From<f32> for TimeLimit {
+    fn from(value: f32) -> Self {
+        TimeLimit::new(value)
+    }
+}
+
+
+
 
 impl Default for Api {
     fn default() -> Self {
@@ -237,29 +303,30 @@ impl Default for LookupOptions {
     fn default() -> Self {
         Self {
             top: 3,
+            max_wildcard_matches: 3,
             specific: Vec::new(),
         }
     }
 }
-impl Default for Membership {
-    fn default() -> Self {
-        Self::BOTH
-    }
-}
+
 impl Default for Display {
     fn default() -> Self {
         Self {
             number: 0,
-            lookup: LookupOptions::default(),
             sort_by: OverviewSortBy::GPH,
             filters: enum_map! {
                 OverviewFilter::MustProfit => true,
                 OverviewFilter::ShowHidden => false,
                 OverviewFilter::Reverse => true,
             },
-            membership: Membership::default(),
-            time_type: TimeType::default(),
+            ..Default::default()
         }
+    }
+}
+
+impl Default for TimeLimit {
+    fn default() -> Self {
+        Self::LOG_OUT_TIME
     }
 }
 
@@ -356,12 +423,6 @@ where
 }
 
 
-// Implement custom deserializers
-use serde::{de::Visitor, Deserializer};
-use std::fmt;
-
-use crate::prices::prices::TimeType;
-
 impl<'de> Deserialize<'de> for Display {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
         where
@@ -391,6 +452,12 @@ A bool to show if methods requiring `membership` should be shown.
                 let (_, number) = map.next_entry::<String, u32>()?
                     .expect("Failed to deserialize `number`");
 
+                let time_limit = map
+                    .next_entry::<String, Option<String>>()?
+                    .and_then(|(_, v)| v)
+                    .as_deref()
+                    .and_then(TimeLimit::parse);
+
                 let (_, lookup) = map.
                     next_entry::<String, LookupOptions>()?
                     .expect("Failed to deserialize lookup options");
@@ -414,6 +481,7 @@ A bool to show if methods requiring `membership` should be shown.
 
                 let final_display = Display {
                     number,
+                    time_limit,
                     lookup,
                     sort_by,
                     filters: filter_map,

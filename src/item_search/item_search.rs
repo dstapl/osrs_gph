@@ -117,6 +117,10 @@ impl ItemSearch {
         intermediate
     }
 
+    pub fn get_all_items(&self) -> &HashMap<String, Item> {
+        &self.items
+    }
+
     fn populate_lookups(&mut self) {
         // Create fileio
         let mut file = FileIO::new(

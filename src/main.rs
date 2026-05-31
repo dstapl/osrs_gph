@@ -4,10 +4,23 @@
 use std::collections::HashMap;
 
 use osrs_gph::{
-    api::Api, check_items_exists, config::{self, OverviewFilter}, file_io::{FileIO, FileOptions}, item_search::recipes::RecipeBook, log_match_panic, prices::prices::{PriceHandle, TimeType}, results_writer::markdown::{DetailedRecipeLookup, OptimalOverview}, types::{DetailedTable, ResultsTable, DETAILED_NUM_HEADERS, OVERVIEW_NUM_HEADERS}
+    log_match_panic, check_items_exists,
+    api::Api,
+    config::{self, OverviewFilter},
+    file_io::{FileIO, FileOptions},
+    item_search::{
+        item_search::ItemSearch,
+        recipes::RecipeBook,
+    },
+    prices::prices::{PriceHandle, TimeType},
+    results_writer::markdown::{DetailedRecipeLookup, OptimalOverview},
+    types::{
+        DETAILED_NUM_HEADERS, OVERVIEW_NUM_HEADERS,
+        OverviewRow, ResultsTable, DetailedTable,
+    }
 };
-use tracing::{info, span, trace, warn, Level};
 
+use tracing::{info, span, trace, warn, Level};
 use clap::{Parser, builder::ArgAction};
 
 #[derive(Parser)]
@@ -57,30 +70,33 @@ fn main() {
         FileOptions::new(true, true, true),
     );
 
+    apply_conf_overrides(&mut conf, &cli);
 
-    trace!(desc = "Handling refresh flag");
-    let choice: bool = cli.refresh;
-    trace!(refresh = choice);
+    maybe_refresh_prices(&cli, &conf, &mut file);
 
-    // Referesh API prices
-    if choice {
-        let msg = "Retrieving prices from API.";
-        info!(desc = msg);
-        println!("{msg}");
-        request_new_prices_from_api(&conf.api, &mut file);
-    } else {
-        let msg = "Loading previous data instead.";
-        info!(desc = msg);
-        println!("{msg}");
-    }
+    let time_type = conf.display.time_type;
 
+    let price_handle = build_price_handle(&conf);
+
+
+    let optimal_overview_rows = generate_overview(&price_handle, &conf);
+    write_overview(&mut file, optimal_overview_rows.clone(), &conf);
+
+    file.set_append(false);
+
+
+    let recipe_lookup_list = build_recipe_lookups(&price_handle, &optimal_overview_rows, &conf, time_type);
+
+    write_detailed_recipes(&mut file, recipe_lookup_list, &conf);
+}
+
+
+fn apply_conf_overrides(conf: &mut config::Config, cli: &Cli) {
     trace!(desc = "Handling show-hidden flag");
     let show_hidden: bool = cli.show_hidden;
     trace!(show_hidden = show_hidden);
 
     conf.display.filters[OverviewFilter::ShowHidden] = show_hidden;
-
-
 
     trace!(desc = "Handling max-hours flag");
     // Override config with new value
@@ -89,16 +105,43 @@ fn main() {
     } else {
         TimeType::MaxHours
     };
-    let time_type = conf.display.time_type;
     trace!(time_type = ?conf.display.time_type);
+}
 
+
+fn maybe_refresh_prices(cli: &Cli, conf: &config::Config, file: &mut FileIO) {
+    if cli.refresh {
+        info!("Retrieving prices from API.");
+        request_new_prices_from_api(&conf.api, file);
+    } else {
+        info!("Loading previous data instead.");
+    }
+}
+
+
+fn build_price_handle(conf: &config::Config) -> PriceHandle {
     // Create item search
-    let mut item_search = osrs_gph::item_search::item_search::ItemSearch::new(
+    let mut item_search = ItemSearch::new(
         HashMap::new(), // Empty items list
         conf.filepaths.clone(),
-        conf.api,
+        conf.api.clone(),
     );
 
+    populate_items(&mut item_search, conf);
+
+    let recipe_list = load_recipes(conf);
+
+    trace!(desc = "Creating price handle...");
+    PriceHandle::new(
+        item_search,
+        recipe_list,
+        conf.profit.coins,
+        conf.profit.percent_margin,
+    )
+}
+
+
+fn populate_items(item_search: &mut ItemSearch, conf: &config::Config) {
     // Populate with items (from_file)
     let item_prices = item_search.get_item_prices(true);
     item_search.update_item_prices(item_prices);
@@ -110,31 +153,47 @@ fn main() {
     );
 
     trace!(desc = "After update_item_prices");
+
     // Check important items exist in memory
-    check_items_exists(&item_search, &["Coins"]);
+    check_items_exists(item_search, &["Coins"]);
 
     // Get ignored items from the config
-    let ignore_items: Vec<String> = conf.profit.ignore_items.clone();
+    let ignore_patterns: &Vec<String> = &conf.profit.ignore_items;
 
-    // Remove items contained in ignore_items
-    item_search.ignore_items(&ignore_items);
+    let all_items = item_search.get_all_items();
 
+    let mut expanded_ignore: Vec<String> = Vec::new();
+
+    for pattern in ignore_patterns {
+        for item_name in all_items.keys() {
+            if matches_pattern(pattern, item_name) {
+                expanded_ignore.push(item_name.to_owned());
+            }
+        }
+
+        // TODO: Should it also match the original pattern if nothing is found?
+        //  E.g. if a method name has a star in? Not sure that would happen...
+    }
+
+    // Duplicates handled by making a hashset in `ItemSearch::ignore_items`
+    item_search.ignore_items(&expanded_ignore);
+}
+
+
+fn load_recipes(conf: &config::Config) -> RecipeBook {
     // Load in recipes
     let mut recipe_list = RecipeBook::new(HashMap::new());
-    recipe_list.load_default_recipes(conf.filepaths.lookup_data.recipes);
+    recipe_list.load_default_recipes(conf.filepaths.lookup_data.recipes.clone());
 
     // Get ignored methods from the config
-    let ignore_methods: Vec<String> = conf.profit.ignore_methods.clone();
+    let ignore_methods: &[String] = &conf.profit.ignore_methods;
     recipe_list.ignore_recipes(ignore_methods);
 
-    trace!(desc = "Creating price handle...");
-    let price_handle = PriceHandle::new(
-        item_search,
-        recipe_list,
-        conf.profit.coins,
-        conf.profit.percent_margin,
-    );
+    recipe_list
+}
 
+
+fn generate_overview(price_handle: &PriceHandle, conf: &config::Config) -> Vec<OverviewRow> {
     trace!(desc = "Computing weights for pareto sort...");
     let weights = osrs_gph::prices::pareto_sort::custom_types::compute_weights(
         conf.profit.coins,
@@ -143,10 +202,16 @@ fn main() {
 
     trace!(desc = "Creating all recipe overview");
     let sort_by = conf.display.sort_by;
-    let optimal_overview = price_handle.all_recipe_overview(&sort_by, &weights, &conf.display);
-    assert!(!optimal_overview.is_empty());
+    let optimal_overview_rows = price_handle.all_recipe_overview(&sort_by, &weights, &conf.display);
 
+    assert!(!optimal_overview_rows.is_empty());
+
+    optimal_overview_rows
+}
+
+fn write_overview(file: &mut FileIO, overview_rows: Vec<OverviewRow>, conf: &config::Config) {
     trace!(desc = "Changing file path to optimal overview results file");
+
     // Write out to file
     file.set_file_path(conf.filepaths.results.optimal.clone());
 
@@ -158,26 +223,27 @@ fn main() {
 
     trace!(desc = "Writing overview to file");
     // TODO: Possible to take reference to optimal_overview instead?
-    let mut writer = OptimalOverview::new(optimal_overview.clone(), [0; OVERVIEW_NUM_HEADERS]);
+    let mut writer = OptimalOverview::new(overview_rows, [0; OVERVIEW_NUM_HEADERS]);
 
     // TODO: Optimise into reduced/buffered calls?
     // Set append mode since all rows are written in separate calls
-    file = file.set_append(true);
+    file.set_append(true);
 
     log_match_panic(
-        writer.write_table(&mut file),
+        writer.write_table(file),
         "Wrote table to optimal_overview",
         "Failed to write table to optimal_overview",
     );
 
-    file = file.set_append(false);
+    file.set_append(false);
+}
 
-
+fn build_recipe_lookups(price_handle: &PriceHandle, optimal_overview_rows: &[OverviewRow], conf: &config::Config, time_type: TimeType) -> Vec<DetailedTable> {
     trace!(desc = "Creating recipe lookups");
 
     // Get top n from the optimal overview
     let mut recipe_lookup_list: Vec<DetailedTable> =
-        optimal_overview
+        optimal_overview_rows
             .iter()
             // TODO: Make config load a usize not u32 for top n
             .take(conf.display.lookup.top.try_into().expect(
@@ -185,7 +251,7 @@ fn main() {
             ))
             .filter_map(|row| {
                 // TODO: This won't include any rows that have a name modifier
-                // E.g. if `*` is appended to the name due to filters
+                // E.g. if `*` is appended to the display name due to filters (i.e. to show importance)
                 let recipe_s = row.name.clone();
                 let x = price_handle.recipe_list.get_recipe(&recipe_s)?;
                 let specific_lookup = price_handle.recipe_lookup_from_recipe(x, time_type)?;
@@ -193,16 +259,25 @@ fn main() {
             })
             .collect();
 
+    let max_wildcard_matches = conf.display.lookup.max_wildcard_matches;
+
     let recipe_lookup_list_specific: Vec<DetailedTable> = conf
         .display
         .lookup
         .specific
         .clone()
-        .into_iter()
-        .filter_map(|recipe_s| {
-            let x = price_handle.recipe_list.get_recipe(&recipe_s)?;
-            let specific_lookup = price_handle.recipe_lookup_from_recipe(x, time_type)?;
-            Some(specific_lookup)
+        .iter()
+        .flat_map(|recipe_s| {
+            let matches = price_handle
+                .recipe_list
+                .get_all_recipes()
+                .values()
+                .filter(move |r| matches_pattern(recipe_s, &r.name))
+                .take(max_wildcard_matches);
+
+            matches.filter_map(|r| {
+                price_handle.recipe_lookup_from_recipe(r, time_type)
+            })
         })
         .collect();
 
@@ -211,14 +286,47 @@ fn main() {
     // Filter duplicates
     recipe_lookup_list.sort_by_key(|e| e.overview.name.clone());
     recipe_lookup_list.dedup_by_key(|e| e.overview.name.clone());
+    
+    recipe_lookup_list
+}
+
+fn matches_pattern(pattern: &str, candidate: &str) -> bool {
+    // Exact match if no wildcards
+    if !pattern.contains('*') {
+        return pattern == candidate
+    }
+
+    let parts: Vec<&str> = pattern.split('*').collect();
+
+    // Glob impl
+    let mut last_index = 0;
+
+    for part in parts {
+        if part.is_empty() {
+            continue;
+        }
+
+        if let Some(pos) = candidate[last_index..].find(part) {
+            last_index += pos + part.len();
+        } else {
+            return false;
+        }
+    }
+
+    true
+}
 
 
+
+fn write_detailed_recipes(file: &mut FileIO, recipe_lookup_list: Vec<DetailedTable>, conf: &config::Config) {
     trace!(desc = "Creating DetailedRecipeLookup struct");
     let mut writer = DetailedRecipeLookup::new(
         conf.profit.coins,
         recipe_lookup_list,
         [0;DETAILED_NUM_HEADERS]
     );
+
+
     trace!(desc = "Changing file path to recipe lookup results file");
     // Write out to file
     file.set_file_path(conf.filepaths.results.lookup.clone());
@@ -230,16 +338,17 @@ fn main() {
         "Failed to clear file contents",
     );
 
-    file = file.set_append(true);
+    file.set_append(true);
 
     trace!(desc = "Writing detailed recipe lookups to file");
 
     log_match_panic(
-        writer.write_all_tables(&mut file),
+        writer.write_all_tables(file),
         "Wrote all recipe lookups to file",
         "Failed to write all recipe tables",
     );
 }
+
 
 fn request_new_prices_from_api(api_settings: &config::Api, file: &mut FileIO) {
     let api = Api::new(api_settings);

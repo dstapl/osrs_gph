@@ -1,6 +1,3 @@
-use thiserror;
-
-
 use reqwest::{header, IntoUrl};
 
 use std::fs::File;
@@ -13,7 +10,11 @@ use osrs_gph::config::{self, Config, Levels};
 mod requirements;
 mod parser;
 
-use parser::*;
+use parser::{
+    Html, TableRow,
+    extract_column, extract_table, extract_row,
+    has_required_levels_for_method
+};
 
 #[derive(Debug, thiserror::Error)]
 enum Errors {

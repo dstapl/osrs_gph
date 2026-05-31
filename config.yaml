@@ -26,7 +26,7 @@ filepaths:
 
 profit:
   # Underscores are removed from strings
-  coins: 2_700_000
+  coins: 2_800_000
   percent_margin: 1.5 # buy +%, sell -% -> overall diff 2*%
 
   custom_weights: # Only if `custom` is selected in display.sort_by
@@ -39,9 +39,7 @@ profit:
   # (Items that have hit the buy limit or are just unwanted)
   ignore_items:
     - Chocolate bar
-    - Weapon poison
-    - Weapon poison(+)
-    - Weapon poison(++)
+    - Weapon poison*
   
   # Ignore specific methods by their name instead of items involved
   ignore_methods:
@@ -53,15 +51,24 @@ display:
   # Number of entries to display in optimal_overview (0 == all)
   number: 0 # For optimal_overview.md
 
+  #   `3h`, `4 hours`, `50 min` etc.
+  #   `null` or empty for disabled
+  #   Auto-caps at 6 hours
+  time_limit: 3 hours
+
   lookup: # For recipe_lookup.md
     # Number of entries from optimal_overview to lookup in recipe_lookup
     # (0 == None / Disabled)
     top: 3
+
+    # Filtering
+    max_wildcard_matches: 3
+
     # Specific entries which might not be in the top bracket
     specific:
       - Humidify Clay
-      - Casting Tan Leather (Black d'hide)
-      - Smithing Mithril cannonballs
+      - Casting * Leather *
+    #   - Smithing Mithril cannonballs
 
   # name, profit, time, gph, custom
   sort_by: profit
@@ -83,27 +90,27 @@ levels:
   levels:
     combat level: 105
     quest points: 273
-    attack: 87
-    defence: 85
-    strength: 80
-    hitpoints: 85
-    ranged: 74
+    attack: 89
+    defence: 86
+    strength: 82
+    hitpoints: 87
+    ranged: 76
     prayer: 70
-    magic: 81
+    magic: 82
     cooking: 70
     woodcutting: 71
     fletching: 60
     fishing: 63
     firemaking: 83
-    crafting: 82
-    smithing: 71
-    mining: 74
-    herblore: 65
-    agility: 71
-    thieving: 77
-    slayer: 75
-    farming: 55
+    crafting: 83
+    smithing: 76
+    mining: 75
+    herblore: 72
+    agility: 74
+    thieving: 78
+    slayer: 78
+    farming: 70
     runecraft: 59
-    hunter: 59
-    construction: 57
-    sailing: 25
+    hunter: 71
+    construction: 76
+    sailing: 38

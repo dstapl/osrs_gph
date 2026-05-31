@@ -31,8 +31,12 @@
 - [ ] Change logging macros to correct types: debug -> trace where applicable
 
 # API/Price Data
-- [ ] Store previous price data in a database
+- [ ] Store previous price data
+    - [ ] Store just using downloaded files
     - [ ] Store last (n) prices for each item with associated date-times
+        - [ ] Storing (n) files
+    - [ ] Store and retrieve using database format
+        - [ ] Items, prices and timestamps. Maybe order by timestamp as a primary key? Slightly rusty on database skills.
     - [ ] Visualise historic price data (from storage)
 
 # /bin/*

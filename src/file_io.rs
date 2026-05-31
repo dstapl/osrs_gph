@@ -111,12 +111,8 @@ impl FileIO {
 
     // TODO: Any better way to do this?
     /// # Panics
-    ///
     /// Will panic if the file fails to be opened. Might not exist.
-    #[must_use]
-    pub fn set_append(mut self, on: bool) -> Self {
-        drop(self.file);
-
+    pub fn set_append(&mut self, on: bool) {
         self.file = std::fs::OpenOptions::new()
             .read(self.options.read)
             .write(self.options.write)
@@ -124,8 +120,6 @@ impl FileIO {
             .append(on)
             .open(self.filename.clone())
             .expect("Failed to deserialize file contents");
-
-        self
     }
 
     // TODO(URGENT!): Rename function

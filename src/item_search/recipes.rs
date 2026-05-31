@@ -7,7 +7,7 @@ use crate::{
 };
 use tracing::{debug, trace, warn};
 
-use std::{collections::{HashMap, HashSet}, fmt::Debug};
+use std::{collections::HashMap, fmt::Debug};
 
 // #[serde(untagged)]
 #[derive(Debug, Default, Clone)]
@@ -216,29 +216,33 @@ impl RecipeBook {
         rec
     }
 
-    pub fn ignore_recipes(&mut self, remove_list: Vec<String>) {
-        let mut removed_recipes: Vec<String> = Vec::with_capacity(remove_list.capacity());
+    pub fn ignore_recipes(&mut self, remove_list: &[String]) {
+        let to_remove_set: std::collections::HashSet<&str> = remove_list.iter()
+            .map(String::as_str)
+            .collect();
 
+        let mut removed_recipes = std::collections::HashSet::new();
+
+        // Iterate through all recipes and remove ignored ones
         self.recipes.retain(|key, _| {
-            let should_remove = remove_list.contains(key);
-            if should_remove { removed_recipes.push(key.to_owned()); }
+            let should_remove = to_remove_set.contains(key.as_str());
+
+            if should_remove {
+                removed_recipes.insert(key.clone());
+            }
 
             !should_remove
         });
 
-        // Check if any are remaining. These will be methods with incorrect names
-        let removed_recipes = HashSet::<String>::from_iter(removed_recipes);
-        let recipe_list= HashSet::<String>::from_iter(remove_list);
-
-        let difference = &recipe_list - &removed_recipes;
-
-        for method in difference {
-            warn!("Invalid recipe name to ignore: {}", method);
+        for name in remove_list {
+            if !removed_recipes.contains(name) {
+                warn!("Invalid recipe name to ignore: {}", name);
+            }
         }
     }
 
-    pub fn get_all_recipes(&self) -> HashMap<String, Recipe> {
-        self.recipes.clone()
+    pub fn get_all_recipes(&self) -> &HashMap<String, Recipe> {
+        &self.recipes
     }
 
     pub fn len(&self) -> usize {

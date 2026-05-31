@@ -222,10 +222,9 @@ fn get_level_from_ul(ul: &Vec<Span>, strict_recommended: bool) -> Vec<LevelRequi
 
 /// TODO: Replace row with a "Method" struct?
 pub fn has_required_levels_for_method(config_levels: &Levels, row: &TableRow) -> bool {
-    let level_req_spans = match extract_spans_from_column(&extract_column(row, 3)) {
-        Some(spans) => spans,
-        None => return true, // No requirements so always allowed
-    };
+    // Extract requirements from correct column
+    // If no requirements, then always allowed (return true)
+    let Some(level_req_spans) = extract_spans_from_column(&extract_column(row, 3)) else { return true };
 
     let strict_recommended: bool = config_levels.strict_recommended;
     let level_reqs: Vec<LevelRequirement> = get_level_from_ul(&level_req_spans, strict_recommended);

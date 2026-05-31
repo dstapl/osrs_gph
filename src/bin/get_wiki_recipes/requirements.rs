@@ -49,7 +49,7 @@ impl LevelRequirement {
     }
 
     pub fn get_name(&self) -> String {
-        self.name.to_string().to_lowercase()
+        self.name.clone().to_lowercase()
     }
 
     pub fn get_level(&self, strict_recommended: bool) -> u32 {
